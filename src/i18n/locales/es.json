@@ -1,0 +1,115 @@
+{
+  "navigation": {
+    "home": "Inicio",
+    "events": "Eventos",
+    "myProfile": "Mi Perfil",
+    "administration": "Administración",
+    "myFavorites": "Mis Favoritos",
+    "messages": "Mensajes",
+    "notifications": "Notificaciones",
+    "features": "Funciones",
+    "account": "Cuenta",
+    "logout": "Cerrar Sesión",
+    "login": "Iniciar Sesión"
+  },
+  "events": {
+    "availableEvents": "Eventos Disponibles",
+    "findTickets": "Encuentra entradas para tus eventos favoritos",
+    "sellTicket": "Vender una entrada",
+    "searchFilters": "Filtros de búsqueda",
+    "searchPlaceholder": "Buscar un evento...",
+    "category": "Categoría",
+    "location": "Ubicación",
+    "all": "Todos",
+    "noEventsFound": "No se encontraron eventos",
+    "modifySearchCriteria": "Intenta modificar tus criterios de búsqueda"
+  },
+  "eventDetail": {
+    "back": "Atrás",
+    "save": "Ahorra",
+    "buy": "Comprar",
+    "noTicketsAvailable": "No hay entradas disponibles",
+    "noTicketsDescription": "Actualmente no hay entradas a la venta para este evento. Vuelve más tarde o crea una alerta."
+  },
+  "login": {
+    "title": "Iniciar Sesión",
+    "login": "Iniciar Sesión",
+    "close": "Cerrar",
+    "username": "Nombre de usuario",
+    "password": "Contraseña",
+    "usernamePlaceholder": "Ingresa tu nombre de usuario",
+    "passwordPlaceholder": "Ingresa tu contraseña",
+    "unavailable": "Autenticación No Disponible",
+    "unavailableMessage": "El sistema de autenticación aún no está implementado. Esta función estará disponible en una actualización futura.",
+    "comingSoon": "Función de autenticación próximamente"
+  },
+  "buyTicket": {
+    "title": "Comprar una entrada",
+    "confirmPurchase": "Confirmar compra",
+    "confirmMessage": "¿Realmente quieres comprar esta entrada por {{price}}?",
+    "priceSummary": "Resumen de precios",
+    "ticketPrice": "Precio de la entrada",
+    "savings": "Ahorros",
+    "originalPrice": "Precio original",
+    "totalToPay": "Total a pagar",
+    "cancel": "Cancelar"
+  },
+  "sellTicket": {
+    "title": "Vender una entrada",
+    "event": "Evento",
+    "salePrice": "Precio de venta",
+    "originalPrice": "Precio original",
+    "description": "Descripción (opcional)",
+    "selectEvent": "Seleccionar un evento",
+    "chooseEvent": "Elige un evento",
+    "buyersSave": "💰 Los compradores ahorrarán {{amount}}€",
+    "priceHigher": "⚠️ Precio superior al original (+{{amount}}€)",
+    "putOnSale": "Poner a la venta",
+    "publishing": "Publicando...",
+    "errorTitle": "Error",
+    "invalidPrices": "Por favor ingresa precios válidos",
+    "priceLimit": "El precio de venta no puede exceder el 150% del precio original"
+  },
+  "userProfile": {
+    "noTicketsForSale": "No hay entradas a la venta",
+    "noTicketsDescription": "Aún no has puesto ninguna entrada a la venta"
+  },
+  "messaging": {
+    "placeholder": "Escribe tu mensaje...",
+    "send": "Enviar",
+    "noMessages": "Sin mensajes",
+    "noMessagesDescription": "No tienes conversaciones en este momento.\\n¡Comienza a chatear con otros usuarios!"
+  },
+  "notifications": {
+    "noNotifications": "Sin notificaciones",
+    "noNotificationsDescription": "No tienes notificaciones en este momento.",
+    "justNow": "Ahora mismo",
+    "hoursAgo": "Hace {{hours}}h",
+    "yesterday": "Ayer"
+  },
+  "favorites": {
+    "myFavorites": "Mis Favoritos",
+    "favoriteEvents": "Eventos favoritos ({{count}})",
+    "findAllFavorites": "Encuentra todos tus eventos favoritos",
+    "noFavoritesTitle": "Aún no hay favoritos",
+    "noFavoritesDescription": "Agrega eventos a tus favoritos para encontrarlos fácilmente aquí",
+    "exploreTip": "¡Explora eventos y agrega tus favoritos!"
+  },
+  "home": {
+    "heroTitle": "Eventy",
+    "heroSubtitle": "Compra y vende tus entradas de forma segura",
+    "discoverEvents": "Descubrir eventos",
+    "featuredEvents": "Eventos destacados",
+    "viewTickets": "Ver entradas →"
+  },
+  "common": {
+    "price": "{{amount}}€",
+    "error": "Error",
+    "success": "Éxito",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "close": "Cerrar"
+  }
+}
