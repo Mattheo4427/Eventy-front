@@ -31,7 +31,7 @@ The home screen welcomes users with:
 - **Session Management:** Stay logged in securely across app sessions
 - **Role-Based Access:** Different experiences for regular users and administrators
 
-### � Browse & Discover Events
+### 🔎 Browse & Discover Events
 - **Event List:** Scroll through upcoming events with beautiful card layouts
 - **Event Details:** View comprehensive information including:
   - Event name, date, time, and location
