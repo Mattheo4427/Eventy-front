@@ -131,7 +131,7 @@ The app automatically detects your device language and adjusts accordingly. You 
 
 ## 🛡️ Security & Trust
 
-Eventy prioritizes user safety through: 
+Eventy prioritizes user safety through:
 - **Secure Authentication:** Protected login and registration
 - **Encrypted Transactions:** Safe payment processing
 - **Verified Accounts:** User verification to reduce fraud
