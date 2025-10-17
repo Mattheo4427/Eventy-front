@@ -12,6 +12,6 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.MAIN_REPO_TOKEN }}
-          repository: <YOUR_USER>/Eventy
+          repository: Mattheo4427/Eventy
           event-type: submodule-updated
           client-payload: '{"submodule": "${{ github.repository }}"}'
