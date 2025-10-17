@@ -131,7 +131,7 @@ The app automatically detects your device language and adjusts accordingly. You 
 
 ---
 
-## � Security & Trust
+## 🛡️ Security & Trust
 
 Eventy prioritizes user safety through:
 - **Secure Authentication:** Protected login and registration
