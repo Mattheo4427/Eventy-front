@@ -75,7 +75,6 @@ Stay informed with notifications about:
 - Ticket sales
 - New messages from buyers/sellers
 - Upcoming events you're attending
-- Favorite events on sale
 
 ### 🛡️ Safety & Trust Features
 
