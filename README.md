@@ -72,7 +72,6 @@ The home screen welcomes users with:
 ### 🔔 Notifications
 Stay informed with notifications about:
 - Successful purchases
-- Ticket sales
 - New messages from buyers/sellers
 - Upcoming events you're attending
 
