@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomModal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
+import { PaymentForm } from './PaymentForm';
 import { Ticket, Event } from '../types';
 
 interface BuyTicketModalProps {
@@ -15,6 +16,9 @@ interface BuyTicketModalProps {
 }
 
 export function BuyTicketModal({ visible, ticket, event, onBuy, onClose }: BuyTicketModalProps) {
+  const [showPayment, setShowPayment] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const formatPrice = (price: number) => `${price}€`;
 
   const handlePurchase = () => {
@@ -27,125 +31,211 @@ export function BuyTicketModal({ visible, ticket, event, onBuy, onClose }: BuyTi
           style: 'cancel'
         },
         {
-          text: 'Buy',
-          onPress: () => onBuy()
+          text: 'Continue to payment',
+          onPress: () => setShowPayment(true)
         }
       ]
     );
   };
 
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
+    setIsProcessing(true);
+
+    try {
+      // Optional: Confirm purchase on backend
+      // const response = await fetch('YOUR_BACKEND_URL/api/tickets/confirm', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${yourAuthToken}`,
+      //   },
+      //   body: JSON.stringify({
+      //     ticketId: ticket.id,
+      //     paymentIntentId,
+      //   }),
+      // });
+
+      Alert.alert(
+        'Success!',
+        'Your ticket has been purchased successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              onBuy();
+              handleModalClose();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Payment succeeded but failed to create ticket. Please contact support.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaymentError = (error: string) => {
+    Alert.alert('Payment Failed', error, [{ text: 'Try Again' }]);
+  };
+
+  const handleBack = () => {
+    if (!isProcessing) {
+      setShowPayment(false);
+    }
+  };
+
+  const handleModalClose = () => {
+    if (!isProcessing) {
+      setShowPayment(false);
+      onClose();
+    }
+  };
+
   const savings = ticket.originalPrice - ticket.price;
+  // Convert price from euros to cents for Stripe
+  const priceInCents = Math.round(ticket.price * 100);
 
   return (
     <CustomModal
       visible={visible}
-      onClose={onClose}
-      title="Buy a ticket"
+      onClose={handleModalClose}
+      title={showPayment ? 'Payment' : 'Buy a ticket'}
     >
       <View style={styles.container}>
-        {/* Event Info */}
-        <Card style={styles.eventCard}>
-          <CardContent>
-            <Text style={styles.eventTitle}>{event.title}</Text>
-            <View style={styles.eventMeta}>
-              <View style={styles.metaItem}>
-                <Ionicons name="calendar" size={16} color="#6b7280" />
-                <Text style={styles.metaText}>
-                  {new Date(event.date).toLocaleDateString('fr-FR')}
-                </Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Ionicons name="location" size={16} color="#6b7280" />
-                <Text style={styles.metaText}>{event.venue}</Text>
-              </View>
-            </View>
-          </CardContent>
-        </Card>
+        {!showPayment ? (
+          <>
+            {/* Event Info */}
+            <Card style={styles.eventCard}>
+              <CardContent>
+                <Text style={styles.eventTitle}>{event.title}</Text>
+                <View style={styles.eventMeta}>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="calendar" size={16} color="#6b7280" />
+                    <Text style={styles.metaText}>
+                      {new Date(event.date).toLocaleDateString('fr-FR')}
+                    </Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="location" size={16} color="#6b7280" />
+                    <Text style={styles.metaText}>{event.venue}</Text>
+                  </View>
+                </View>
+              </CardContent>
+            </Card>
 
-        {/* Ticket Details */}
-        <Card style={styles.ticketCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Détails du billet</Text>
-            
-            <View style={styles.ticketInfo}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Section:</Text>
-                <Text style={styles.infoValue}>{ticket.section}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Rang:</Text>
-                <Text style={styles.infoValue}>{ticket.row}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Siège:</Text>
-                <Text style={styles.infoValue}>{ticket.seat}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Vendeur:</Text>
-                <Text style={styles.infoValue}>{ticket.sellerName}</Text>
-              </View>
-            </View>
+            {/* Ticket Details */}
+            <Card style={styles.ticketCard}>
+              <CardContent>
+                <Text style={styles.sectionTitle}>Détails du billet</Text>
+                
+                <View style={styles.ticketInfo}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Section:</Text>
+                    <Text style={styles.infoValue}>{ticket.section}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Rang:</Text>
+                    <Text style={styles.infoValue}>{ticket.row}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Siège:</Text>
+                    <Text style={styles.infoValue}>{ticket.seat}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Vendeur:</Text>
+                    <Text style={styles.infoValue}>{ticket.sellerName}</Text>
+                  </View>
+                </View>
 
-            {ticket.description && (
-              <View style={styles.description}>
-                <Text style={styles.descriptionLabel}>Description:</Text>
-                <Text style={styles.descriptionText}>{ticket.description}</Text>
-              </View>
-            )}
-          </CardContent>
-        </Card>
+                {ticket.description && (
+                  <View style={styles.description}>
+                    <Text style={styles.descriptionLabel}>Description:</Text>
+                    <Text style={styles.descriptionText}>{ticket.description}</Text>
+                  </View>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Price Summary */}
-        <Card style={styles.priceCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Price summary</Text>
-            
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Ticket price:</Text>
-              <Text style={styles.priceValue}>{formatPrice(ticket.price)}</Text>
-            </View>
-            
-            {savings > 0 && (
-              <View style={styles.priceRow}>
-                <Text style={styles.savingsLabel}>Savings:</Text>
-                <Text style={styles.savingsValue}>-{formatPrice(savings)}</Text>
-              </View>
-            )}
-            
-            {ticket.originalPrice > ticket.price && (
-              <View style={styles.priceRow}>
-                <Text style={styles.originalPriceLabel}>Original price:</Text>
-                <Text style={styles.originalPriceValue}>
-                  {formatPrice(ticket.originalPrice)}
-                </Text>
-              </View>
-            )}
-            
-            <View style={styles.separator} />
-            
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total to pay:</Text>
-              <Text style={styles.totalValue}>{formatPrice(ticket.price)}</Text>
-            </View>
-          </CardContent>
-        </Card>
+            {/* Price Summary */}
+            <Card style={styles.priceCard}>
+              <CardContent>
+                <Text style={styles.sectionTitle}>Price summary</Text>
+                
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>Ticket price:</Text>
+                  <Text style={styles.priceValue}>{formatPrice(ticket.price)}</Text>
+                </View>
+                
+                {savings > 0 && (
+                  <View style={styles.priceRow}>
+                    <Text style={styles.savingsLabel}>Savings:</Text>
+                    <Text style={styles.savingsValue}>-{formatPrice(savings)}</Text>
+                  </View>
+                )}
+                
+                {ticket.originalPrice > ticket.price && (
+                  <View style={styles.priceRow}>
+                    <Text style={styles.originalPriceLabel}>Original price:</Text>
+                    <Text style={styles.originalPriceValue}>
+                      {formatPrice(ticket.originalPrice)}
+                    </Text>
+                  </View>
+                )}
+                
+                <View style={styles.separator} />
+                
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total to pay:</Text>
+                  <Text style={styles.totalValue}>{formatPrice(ticket.price)}</Text>
+                </View>
+              </CardContent>
+            </Card>
 
-        {/* Actions */}
-                <View style={styles.actions}>
-          <Button
-            title="Cancel"
-            variant="outline"
-            onPress={onClose}
-            size="lg"
-            style={styles.cancelButton}
-          />
-          <Button
-            title={`Buy - ${formatPrice(ticket.price)}`}
-            onPress={handlePurchase}
-            size="lg"
-            style={styles.buyButton}
-          />
-        </View>
+            {/* Actions */}
+            <View style={styles.actions}>
+              <Button
+                title="Cancel"
+                variant="outline"
+                onPress={onClose}
+                size="lg"
+                style={styles.cancelButton}
+              />
+              <Button
+                title={`Buy - ${formatPrice(ticket.price)}`}
+                onPress={handlePurchase}
+                size="lg"
+                style={styles.buyButton}
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Payment Form */}
+            <PaymentForm
+              amount={priceInCents}
+              currency="eur"
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+              disabled={isProcessing}
+            />
+
+            {/* Back Button */}
+            <View style={styles.backButtonContainer}>
+              <Button
+                title="Back to details"
+                variant="outline"
+                onPress={handleBack}
+                size="lg"
+                disabled={isProcessing}
+              />
+            </View>
+          </>
+        )}
       </View>
     </CustomModal>
   );
@@ -282,5 +372,8 @@ const styles = StyleSheet.create({
   },
   buyButton: {
     flex: 1,
+  },
+  backButtonContainer: {
+    marginTop: 8,
   },
 });

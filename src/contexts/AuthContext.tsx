@@ -18,8 +18,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
   const login = async (username: string, password: string): Promise<void> => {
-    // Authentication not yet implemented
-    throw new Error('Authentication service is not yet available');
+    // Mock login: always succeeds and sets a mock user
+    setUser({
+      id: 'mock-user-id',
+      name: username || 'Mock User',
+      email: `${username}@example.com`,
+      role: 'user',
+    });
   };
 
   const logout = async () => {
@@ -28,12 +33,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = user !== null;
 
-  const value: AuthContextType = {
+  const value = React.useMemo(() => ({
     user,
     isAuthenticated,
     login,
     logout,
-  };
+  }), [user, isAuthenticated, login, logout]);
 
   return (
     <AuthContext.Provider value={value}>

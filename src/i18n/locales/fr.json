@@ -41,7 +41,10 @@
     "passwordPlaceholder": "Entrez votre mot de passe",
     "unavailable": "Authentification Non Disponible",
     "unavailableMessage": "Le système d'authentification n'est pas encore implémenté. Cette fonctionnalité sera disponible dans une future mise à jour.",
-    "comingSoon": "Fonctionnalité d'authentification à venir"
+  "comingSoon": "Fonctionnalité d'authentification à venir",
+  "loginButton": "Connexion",
+  "successMessage": "Vous êtes connecté avec succès.",
+  "errorMessage": "Échec de la connexion. Veuillez vérifier vos identifiants et réessayer."
   },
   "buyTicket": {
     "title": "Acheter un billet",
@@ -72,7 +75,24 @@
   },
   "userProfile": {
     "noTicketsForSale": "Aucun billet en vente",
-    "noTicketsDescription": "Vous n'avez pas encore mis de billet en vente"
+    "noTicketsDescription": "Vous n'avez pas encore mis de billet en vente",
+    "stats": {
+      "ticketsForSale": "Billets en vente",
+      "ticketsSold": "Billets vendus",
+      "totalSold": "Total vendu"
+    },
+    "role": {
+      "admin": "Administrateur",
+      "user": "Utilisateur"
+    },
+    "status": {
+      "available": "Disponible",
+      "sold": "Vendu",
+      "pending": "En attente"
+    },
+    "ticketsForSaleTitle": "Mes billets en vente",
+    "unknownEvent": "Événement inconnu",
+    "ticketInfo": "{{section}} - Rang {{row}}, Siège {{seat}}"
   },
   "messaging": {
     "placeholder": "Tapez votre message...",
@@ -105,7 +125,7 @@
   "common": {
     "price": "{{amount}}€",
     "error": "Erreur",
-    "success": "Succès",
+  "success": "Succès",
     "loading": "Chargement...",
     "save": "Enregistrer",
     "cancel": "Annuler",

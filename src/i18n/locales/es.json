@@ -41,7 +41,10 @@
     "passwordPlaceholder": "Ingresa tu contraseña",
     "unavailable": "Autenticación No Disponible",
     "unavailableMessage": "El sistema de autenticación aún no está implementado. Esta función estará disponible en una actualización futura.",
-    "comingSoon": "Función de autenticación próximamente"
+  "comingSoon": "Función de autenticación próximamente",
+  "loginButton": "Iniciar sesión",
+  "successMessage": "Has iniciado sesión correctamente.",
+  "errorMessage": "Error al iniciar sesión. Por favor verifica tus credenciales e inténtalo de nuevo."
   },
   "buyTicket": {
     "title": "Comprar una entrada",
@@ -70,22 +73,27 @@
     "invalidPrices": "Por favor ingresa precios válidos",
     "priceLimit": "El precio de venta no puede exceder el 150% del precio original"
   },
+
   "userProfile": {
     "noTicketsForSale": "No hay entradas a la venta",
-    "noTicketsDescription": "Aún no has puesto ninguna entrada a la venta"
-  },
-  "messaging": {
-    "placeholder": "Escribe tu mensaje...",
-    "send": "Enviar",
-    "noMessages": "Sin mensajes",
-    "noMessagesDescription": "No tienes conversaciones en este momento.\\n¡Comienza a chatear con otros usuarios!"
-  },
-  "notifications": {
-    "noNotifications": "Sin notificaciones",
-    "noNotificationsDescription": "No tienes notificaciones en este momento.",
-    "justNow": "Ahora mismo",
-    "hoursAgo": "Hace {{hours}}h",
-    "yesterday": "Ayer"
+    "noTicketsDescription": "Aún no has puesto ninguna entrada a la venta",
+    "stats": {
+      "ticketsForSale": "Boletos en venta",
+      "ticketsSold": "Boletos vendidos",
+      "totalSold": "Total vendido"
+    },
+    "role": {
+      "admin": "Administrador",
+      "user": "Usuario"
+    },
+    "status": {
+      "available": "Disponible",
+      "sold": "Vendido",
+      "pending": "Pendiente"
+    },
+    "ticketsForSaleTitle": "Mis boletos en venta",
+    "unknownEvent": "Evento desconocido",
+    "ticketInfo": "{{section}} - Fila {{row}}, Asiento {{seat}}"
   },
   "favorites": {
     "myFavorites": "Mis Favoritos",
@@ -105,7 +113,7 @@
   "common": {
     "price": "{{amount}}€",
     "error": "Error",
-    "success": "Éxito",
+  "success": "Éxito",
     "loading": "Cargando...",
     "save": "Guardar",
     "cancel": "Cancelar",

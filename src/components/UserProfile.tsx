@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { User, Ticket, Event } from '../types';
@@ -10,7 +11,8 @@ interface UserProfileProps {
   events: Event[];
 }
 
-export function UserProfile({ user, tickets, events }: UserProfileProps) {
+export function UserProfile({ user, tickets, events }: Readonly<UserProfileProps>) {
+  const { t } = useTranslation();
   const getEventById = (eventId: string) => events.find(e => e.id === eventId);
 
   const formatPrice = (price: number) => `${price}€`;
@@ -31,11 +33,11 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'available':
-        return 'Disponible';
+        return t('userProfile.status.available');
       case 'sold':
-        return 'Vendu';
+        return t('userProfile.status.sold');
       case 'pending':
-        return 'En attente';
+        return t('userProfile.status.pending');
       default:
         return status;
     }
@@ -62,7 +64,9 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
                     styles.roleText,
                     user.role === 'admin' ? styles.adminRole : styles.userRole
                   ]}>
-                    {user.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+                    {user.role === 'admin'
+                      ? t('userProfile.role.admin')
+                      : t('userProfile.role.user')}
                   </Text>
                 </View>
               </View>
@@ -75,7 +79,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
           <Card style={styles.statCard}>
             <CardContent style={styles.statContent}>
               <Text style={styles.statNumber}>{tickets.length}</Text>
-              <Text style={styles.statLabel}>Billets en vente</Text>
+              <Text style={styles.statLabel}>{t('userProfile.stats.ticketsForSale')}</Text>
             </CardContent>
           </Card>
           <Card style={styles.statCard}>
@@ -83,7 +87,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
               <Text style={styles.statNumber}>
                 {tickets.filter(t => t.status === 'sold').length}
               </Text>
-              <Text style={styles.statLabel}>Billets vendus</Text>
+              <Text style={styles.statLabel}>{t('userProfile.stats.ticketsSold')}</Text>
             </CardContent>
           </Card>
           <Card style={styles.statCard}>
@@ -92,7 +96,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
                 {formatPrice(tickets.filter(t => t.status === 'sold')
                   .reduce((sum, t) => sum + t.price, 0))}
               </Text>
-              <Text style={styles.statLabel}>Total vendu</Text>
+              <Text style={styles.statLabel}>{t('userProfile.stats.totalSold')}</Text>
             </CardContent>
           </Card>
         </View>
@@ -100,7 +104,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
         {/* Tickets List */}
         <Card style={styles.ticketsCard}>
           <CardHeader>
-            <Text style={styles.ticketsTitle}>Mes billets en vente</Text>
+            <Text style={styles.ticketsTitle}>{t('userProfile.ticketsForSaleTitle')}</Text>
           </CardHeader>
           <CardContent>
             {tickets.length > 0 ? (
@@ -111,7 +115,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
                     <View key={ticket.id} style={styles.ticketItem}>
                       <View style={styles.ticketHeader}>
                         <Text style={styles.ticketEvent}>
-                          {event?.title || 'Événement inconnu'}
+                          {event?.title || t('userProfile.unknownEvent')}
                         </Text>
                         <View style={[
                           styles.statusBadge,
@@ -128,7 +132,11 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
                       
                       <View style={styles.ticketDetails}>
                         <Text style={styles.ticketInfo}>
-                          {ticket.section} - Rang {ticket.row}, Siège {ticket.seat}
+                          {t('userProfile.ticketInfo', {
+                            section: ticket.section,
+                            row: ticket.row,
+                            seat: ticket.seat
+                          })}
                         </Text>
                         <View style={styles.ticketPricing}>
                           <Text style={styles.currentPrice}>
@@ -147,7 +155,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
                           <View style={styles.metaItem}>
                             <Ionicons name="calendar-outline" size={14} color="#6b7280" />
                             <Text style={styles.metaText}>
-                              {new Date(event.date).toLocaleDateString('fr-FR')}
+                              {new Date(event.date).toLocaleDateString()}
                             </Text>
                           </View>
                           <View style={styles.metaItem}>
@@ -169,9 +177,9 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="ticket-outline" size={48} color="#9ca3af" />
-                <Text style={styles.emptyTitle}>Aucun billet en vente</Text>
+                <Text style={styles.emptyTitle}>{t('userProfile.noTicketsForSale')}</Text>
                 <Text style={styles.emptyText}>
-                  Vous n'avez pas encore mis de billet en vente
+                  {t('userProfile.noTicketsDescription')}
                 </Text>
               </View>
             )}

@@ -41,7 +41,10 @@
     "passwordPlaceholder": "Enter your password",
     "unavailable": "Authentication Not Available",
     "unavailableMessage": "The authentication system is not yet implemented. This feature will be available in a future update.",
-    "comingSoon": "Authentication feature coming soon"
+  "comingSoon": "Authentication feature coming soon",
+  "loginButton": "Login",
+  "successMessage": "You have successfully logged in.",
+  "errorMessage": "Login failed. Please check your credentials and try again."
   },
   "buyTicket": {
     "title": "Buy a ticket",
@@ -72,7 +75,24 @@
   },
   "userProfile": {
     "noTicketsForSale": "No tickets for sale",
-    "noTicketsDescription": "You haven't put any tickets for sale yet"
+    "noTicketsDescription": "You haven't put any tickets for sale yet",
+    "stats": {
+      "ticketsForSale": "Tickets for sale",
+      "ticketsSold": "Tickets sold",
+      "totalSold": "Total sold"
+    },
+    "role": {
+      "admin": "Administrator",
+      "user": "User"
+    },
+    "status": {
+      "available": "Available",
+      "sold": "Sold",
+      "pending": "Pending"
+    },
+    "ticketsForSaleTitle": "My tickets for sale",
+    "unknownEvent": "Unknown event",
+    "ticketInfo": "{{section}} - Row {{row}}, Seat {{seat}}"
   },
   "messaging": {
     "placeholder": "Type your message...",
@@ -105,7 +125,7 @@
   "common": {
     "price": "{{amount}}€",
     "error": "Error",
-    "success": "Success",
+  "success": "Success",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",

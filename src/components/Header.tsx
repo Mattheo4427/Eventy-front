@@ -267,7 +267,6 @@ export function Header({
                     }} 
                     style={styles.loginButton}
                   >
-                    <Ionicons name="log-in-outline" size={24} color="#2563eb" />
                     <Text style={styles.loginText}>{t('navigation.login')}</Text>
                   </TouchableOpacity>
                 )}

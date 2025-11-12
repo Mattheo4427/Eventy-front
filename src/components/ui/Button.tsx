@@ -96,6 +96,8 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
+    width: '100%',
   },
   primaryText: {
     color: '#ffffff',

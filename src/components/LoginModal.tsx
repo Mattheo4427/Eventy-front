@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { CustomModal } from './ui/Modal';
@@ -16,11 +17,16 @@ export function LoginModal({ visible, onClose }: LoginModalProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  const { login } = useAuth();
+
   const handleLogin = async () => {
-    Alert.alert(
-      t('login.unavailable'),
-      t('login.unavailableMessage')
-    );
+    try {
+      await login(username, password);
+  Alert.alert(t('login.successMessage'));
+      handleClose();
+    } catch (error) {
+      Alert.alert(t('login.error'), t('login.errorMessage'));
+    }
   };
 
   const handleClose = () => {
@@ -36,11 +42,7 @@ export function LoginModal({ visible, onClose }: LoginModalProps) {
       title={t('login.title')}
     >
       <View style={styles.form}>
-        <View style={styles.infoContainer}>
-          <Text style={styles.infoText}>
-            ℹ️ {t('login.comingSoon')}
-          </Text>
-        </View>
+        {/* Info message removed, you can add a custom message if needed */}
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>{t('login.username')}</Text>
@@ -50,7 +52,7 @@ export function LoginModal({ visible, onClose }: LoginModalProps) {
             onChangeText={setUsername}
             autoCapitalize="none"
             autoCorrect={false}
-            editable={false}
+            editable={true}
           />
         </View>
 
@@ -61,11 +63,17 @@ export function LoginModal({ visible, onClose }: LoginModalProps) {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            editable={false}
+            editable={true}
           />
         </View>
 
         <View style={styles.actions}>
+          <Button
+            title={t('login.loginButton')}
+            onPress={handleLogin}
+            style={[styles.closeButton, { justifyContent: 'center', alignItems: 'center' }]}
+            textStyle={{ textAlign: 'center', width: '100%' }}
+          />
           <Button
             title={t('common.close')}
             variant="outline"

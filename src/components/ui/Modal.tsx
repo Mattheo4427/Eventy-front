@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 interface CustomModalProps extends Partial<ModalProps> {
   visible: boolean;
   onClose: () => void;
-  title: string;
+  title: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -22,7 +22,11 @@ export function CustomModal({ visible, onClose, title, children, ...props }: Cus
       <SafeAreaView style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
+            {typeof title === 'string' ? (
+              <Text style={styles.title}>{title}</Text>
+            ) : (
+              title
+            )}
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#374151" />
             </TouchableOpacity>
