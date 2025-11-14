@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { CustomModal } from './ui/Modal';
-import { Input } from './ui/Input';
 import { Button } from './ui/Button';
+import { useAuth } from '../contexts/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 
 interface LoginModalProps {
   visible: boolean;
@@ -12,100 +13,66 @@ interface LoginModalProps {
 
 export function LoginModal({ visible, onClose }: LoginModalProps) {
   const { t } = useTranslation();
-  
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const { login } = useAuth(); // Récupère la fonction de connexion
 
-  const handleLogin = async () => {
-    Alert.alert(
-      t('login.unavailable'),
-      t('login.unavailableMessage')
-    );
-  };
-
-  const handleClose = () => {
-    setUsername('');
-    setPassword('');
-    onClose();
+  const handleLogin = () => {
+    // Appelle la fonction de connexion du contexte
+    // qui va ouvrir la page Keycloak
+    login();
+    onClose(); // Ferme la modale
   };
 
   return (
     <CustomModal
       visible={visible}
-      onClose={handleClose}
+      onClose={onClose}
       title={t('login.title')}
     >
-      <View style={styles.form}>
+      <View style={styles.content}>
         <View style={styles.infoContainer}>
+          <Ionicons name="shield-checkmark-outline" size={24} color="#059669" />
           <Text style={styles.infoText}>
-            ℹ️ {t('login.comingSoon')}
+            Vous allez être redirigé vers notre portail de connexion sécurisé.
           </Text>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('login.username')}</Text>
-          <Input
-            placeholder={t('login.usernamePlaceholder')}
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={false}
-          />
-        </View>
+        <Button
+          title="Continuer vers la connexion"
+          onPress={handleLogin}
+          style={styles.loginButton}
+        />
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t('login.password')}</Text>
-          <Input
-            placeholder={t('login.passwordPlaceholder')}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={false}
-          />
-        </View>
-
-        <View style={styles.actions}>
-          <Button
-            title={t('common.close')}
-            variant="outline"
-            onPress={handleClose}
-            style={styles.closeButton}
-          />
-        </View>
+        <Button
+          title={t('common.cancel')}
+          variant="outline"
+          onPress={onClose}
+        />
       </View>
     </CustomModal>
   );
 }
 
 const styles = StyleSheet.create({
-  form: {
+  content: {
     gap: 20,
   },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-  },
   infoContainer: {
-    backgroundColor: '#f0f9ff',
-    padding: 12,
+    backgroundColor: '#f0fdf4',
+    padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#0ea5e9',
+    borderColor: '#bbf7d0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   infoText: {
+    flex: 1,
     fontSize: 14,
-    color: '#0369a1',
+    color: '#065f46',
     lineHeight: 20,
   },
-  actions: {
-    marginTop: 12,
-  },
-  closeButton: {
-    width: '100%',
+  loginButton: {
+    marginTop: 8,
   },
 });
