@@ -1,4 +1,18 @@
 {
+  "login": {
+    "title": "Iniciar sesión",
+    "redirectInfo": "Será redirigido a nuestro portal de inicio de sesión seguro.",
+    "continue": "Continuar al inicio de sesión",
+    "login": "Iniciar sesión",
+    "close": "Cerrar",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "usernamePlaceholder": "Ingrese su usuario",
+    "passwordPlaceholder": "Ingrese su contraseña",
+    "unavailable": "Autenticación no disponible",
+    "unavailableMessage": "El sistema de autenticación aún no está implementado. Esta función estará disponible en una futura actualización.",
+    "comingSoon": "Función de autenticación próximamente disponible"
+  },
   "navigation": {
     "home": "Inicio",
     "events": "Eventos",
@@ -30,18 +44,6 @@
     "buy": "Comprar",
     "noTicketsAvailable": "No hay entradas disponibles",
     "noTicketsDescription": "Actualmente no hay entradas a la venta para este evento. Vuelve más tarde o crea una alerta."
-  },
-  "login": {
-    "title": "Iniciar Sesión",
-    "login": "Iniciar Sesión",
-    "close": "Cerrar",
-    "username": "Nombre de usuario",
-    "password": "Contraseña",
-    "usernamePlaceholder": "Ingresa tu nombre de usuario",
-    "passwordPlaceholder": "Ingresa tu contraseña",
-    "unavailable": "Autenticación No Disponible",
-    "unavailableMessage": "El sistema de autenticación aún no está implementado. Esta función estará disponible en una actualización futura.",
-    "comingSoon": "Función de autenticación próximamente"
   },
   "buyTicket": {
     "title": "Comprar una entrada",

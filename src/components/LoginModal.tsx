@@ -1,6 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { CustomModal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,7 +12,7 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ visible, onClose }: LoginModalProps) {
-  const { t } = useTranslation();
+    const { t } = useTranslation();
   const { login } = useAuth(); // Récupère la fonction de connexion
 
   const handleLogin = () => {
@@ -32,12 +32,12 @@ export function LoginModal({ visible, onClose }: LoginModalProps) {
         <View style={styles.infoContainer}>
           <Ionicons name="shield-checkmark-outline" size={24} color="#059669" />
           <Text style={styles.infoText}>
-            Vous allez être redirigé vers notre portail de connexion sécurisé.
+            {t('login.redirectInfo')}
           </Text>
         </View>
 
         <Button
-          title="Continuer vers la connexion"
+          title={t('login.continue')}
           onPress={handleLogin}
           style={styles.loginButton}
         />

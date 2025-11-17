@@ -1,4 +1,18 @@
 {
+  "login": {
+    "title": "Login",
+    "redirectInfo": "You will be redirected to our secure login portal.",
+    "continue": "Continue to login",
+    "login": "Login",
+    "close": "Close",
+    "username": "Username",
+    "password": "Password",
+    "usernamePlaceholder": "Enter your username",
+    "passwordPlaceholder": "Enter your password",
+    "unavailable": "Authentication Not Available",
+    "unavailableMessage": "The authentication system is not yet implemented. This feature will be available in a future update.",
+    "comingSoon": "Authentication feature coming soon"
+  },
   "navigation": {
     "home": "Home",
     "events": "Events",
@@ -30,18 +44,6 @@
     "buy": "Buy",
     "noTicketsAvailable": "No tickets available",
     "noTicketsDescription": "There are currently no tickets for sale for this event. Come back later or create an alert."
-  },
-  "login": {
-    "title": "Login",
-    "login": "Login",
-    "close": "Close",
-    "username": "Username",
-    "password": "Password",
-    "usernamePlaceholder": "Enter your username",
-    "passwordPlaceholder": "Enter your password",
-    "unavailable": "Authentication Not Available",
-    "unavailableMessage": "The authentication system is not yet implemented. This feature will be available in a future update.",
-    "comingSoon": "Authentication feature coming soon"
   },
   "buyTicket": {
     "title": "Buy a ticket",
