@@ -26,12 +26,12 @@ export function HomeScreen({ events, onViewEvent, onNavigateToEvents }: HomeScre
         />
         <View style={styles.heroOverlay}>
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>{t('home.heroTitle')}</Text>
+            <Text style={styles.heroTitle}>{t('heroTitle', { ns: 'home' })}</Text>
             <Text style={styles.heroSubtitle}>
-              {t('home.heroSubtitle')}
+              {t('heroSubtitle', { ns: 'home' })}
             </Text>
             <Button 
-              title={t('home.discoverEvents')}
+              title={t('discoverEvents', { ns: 'home' })}
               onPress={onNavigateToEvents}
               size="lg"
               style={styles.heroButton}
@@ -42,7 +42,7 @@ export function HomeScreen({ events, onViewEvent, onNavigateToEvents }: HomeScre
 
       {/* Featured Events */}
       <View style={styles.featuredSection}>
-        <Text style={styles.sectionTitle}>{t('home.featuredEvents')}</Text>
+        <Text style={styles.sectionTitle}>{t('featuredEvents', { ns: 'home' })}</Text>
         
         <ScrollView 
           horizontal 
@@ -68,7 +68,7 @@ export function HomeScreen({ events, onViewEvent, onNavigateToEvents }: HomeScre
                   {new Date(event.date).toLocaleDateString(i18n.language === 'es' ? 'es-ES' : i18n.language === 'fr' ? 'fr-FR' : 'en-US')} • {event.location}
                 </Text>
                 <Text style={styles.eventLink}>
-                  {t('home.viewTickets')}
+                  {t('viewTickets', { ns: 'home' })}
                 </Text>
               </View>
             </TouchableOpacity>

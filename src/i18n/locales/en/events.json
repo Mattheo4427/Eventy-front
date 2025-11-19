@@ -1,0 +1,12 @@
+{
+  "availableEvents": "Available Events",
+  "findTickets": "Find tickets for your favorite events",
+  "sellTicket": "Sell a ticket",
+  "searchFilters": "Search filters",
+  "searchPlaceholder": "Search for an event...",
+  "category": "Category",
+  "location": "Location",
+  "all": "All",
+  "noEventsFound": "No events found",
+  "modifySearchCriteria": "Try modifying your search criteria"
+}

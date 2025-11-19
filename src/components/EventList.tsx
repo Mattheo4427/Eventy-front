@@ -37,11 +37,11 @@ export function EventList({ events, onViewEvent, onSellTicket }: EventListProps)
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>{t('events.availableEvents')}</Text>
-          <Text style={styles.subtitle}>{t('events.findTickets')}</Text>
+          <Text style={styles.title}>{t('availableEvents', { ns: 'events' })}</Text>
+          <Text style={styles.subtitle}>{t('findTickets', { ns: 'events' })}</Text>
         </View>
         <Button 
-          title={t('events.sellTicket')}
+          title={t('sellTicket', { ns: 'events' })}
           onPress={onSellTicket}
           size="lg"
           style={styles.sellButton}
@@ -51,12 +51,12 @@ export function EventList({ events, onViewEvent, onSellTicket }: EventListProps)
       {/* Filters */}
       <Card style={styles.filtersCard}>
         <CardContent>
-          <Text style={styles.filtersTitle}>{t('events.searchFilters')}</Text>
+          <Text style={styles.filtersTitle}>{t('searchFilters', { ns: 'events' })}</Text>
           
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
             <Input
-              placeholder={t('events.searchPlaceholder')}
+              placeholder={t('searchPlaceholder', { ns: 'events' })}
               value={searchTerm}
               onChangeText={setSearchTerm}
               style={styles.searchInput}
@@ -64,7 +64,7 @@ export function EventList({ events, onViewEvent, onSellTicket }: EventListProps)
           </View>
 
           <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>{t('events.category')}:</Text>
+            <Text style={styles.filterLabel}>{t('category', { ns: 'events' })}:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <TouchableOpacity
                 style={[

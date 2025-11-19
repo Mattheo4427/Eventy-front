@@ -1,0 +1,12 @@
+{
+  "availableEvents": "Eventos Disponibles",
+  "findTickets": "Encuentra entradas para tus eventos favoritos",
+  "sellTicket": "Vender una entrada",
+  "searchFilters": "Filtros de búsqueda",
+  "searchPlaceholder": "Buscar un evento...",
+  "category": "Categoría",
+  "location": "Ubicación",
+  "all": "Todos",
+  "noEventsFound": "No se encontraron eventos",
+  "modifySearchCriteria": "Intenta modificar tus criterios de búsqueda"
+}

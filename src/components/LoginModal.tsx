@@ -26,24 +26,24 @@ export function LoginModal({ visible, onClose }: LoginModalProps) {
     <CustomModal
       visible={visible}
       onClose={onClose}
-      title={t('login.title')}
+      title={t('title', { ns: 'login' })}
     >
       <View style={styles.content}>
         <View style={styles.infoContainer}>
           <Ionicons name="shield-checkmark-outline" size={24} color="#059669" />
           <Text style={styles.infoText}>
-            {t('login.redirectInfo')}
+            {t('redirectInfo', { ns: 'login' })}
           </Text>
         </View>
 
         <Button
-          title={t('login.continue')}
+          title={t('continue', { ns: 'login' })}
           onPress={handleLogin}
           style={styles.loginButton}
         />
 
         <Button
-          title={t('common.cancel')}
+          title={t('cancel', { ns: 'common' })}
           variant="outline"
           onPress={onClose}
         />

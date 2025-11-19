@@ -1,0 +1,14 @@
+{
+  "title": "Connexion",
+  "redirectInfo": "Vous allez être redirigé vers notre portail de connexion sécurisé.",
+  "continue": "Continuer vers la connexion",
+  "login": "Connexion",
+  "close": "Fermer",
+  "username": "Nom d'utilisateur",
+  "password": "Mot de passe",
+  "usernamePlaceholder": "Entrez votre nom d'utilisateur",
+  "passwordPlaceholder": "Entrez votre mot de passe",
+  "unavailable": "Authentification non disponible",
+  "unavailableMessage": "Le système d'authentification n'est pas encore implémenté. Cette fonctionnalité sera disponible dans une future mise à jour.",
+  "comingSoon": "Fonctionnalité d'authentification bientôt disponible"
+}

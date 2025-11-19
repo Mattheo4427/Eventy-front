@@ -1,0 +1,11 @@
+{
+  "title": "Comprar una entrada",
+  "confirmPurchase": "Confirmar compra",
+  "confirmMessage": "¿Realmente quieres comprar esta entrada por {{price}}?",
+  "priceSummary": "Resumen de precios",
+  "ticketPrice": "Precio de la entrada",
+  "savings": "Ahorros",
+  "originalPrice": "Precio original",
+  "totalToPay": "Total a pagar",
+  "cancel": "Cancelar"
+}

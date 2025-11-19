@@ -1,0 +1,16 @@
+{
+  "title": "Sell a ticket",
+  "event": "Event",
+  "salePrice": "Sale price",
+  "originalPrice": "Original price",
+  "description": "Description (optional)",
+  "selectEvent": "Select an event",
+  "chooseEvent": "Choose an event",
+  "buyersSave": "💰 Buyers will save {{amount}}€",
+  "priceHigher": "⚠️ Price higher than original (+{{amount}}€)",
+  "putOnSale": "Put on sale",
+  "publishing": "Publishing...",
+  "errorTitle": "Error",
+  "invalidPrices": "Please enter valid prices",
+  "priceLimit": "The sale price cannot exceed 150% of the original price"
+}

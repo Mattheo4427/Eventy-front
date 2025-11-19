@@ -1,0 +1,7 @@
+{
+  "noNotifications": "Sin notificaciones",
+  "noNotificationsDescription": "No tienes notificaciones en este momento.",
+  "justNow": "Ahora mismo",
+  "hoursAgo": "Hace {{hours}}h",
+  "yesterday": "Ayer"
+}

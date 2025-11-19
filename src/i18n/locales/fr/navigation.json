@@ -1,0 +1,13 @@
+{
+  "home": "Accueil",
+  "events": "Événements",
+  "myProfile": "Mon Profil",
+  "administration": "Administration",
+  "myFavorites": "Mes Favoris",
+  "messages": "Messages",
+  "notifications": "Notifications",
+  "features": "Fonctionnalités",
+  "account": "Compte",
+  "logout": "Déconnexion",
+  "login": "Se connecter"
+}

@@ -1,0 +1,8 @@
+{
+  "myFavorites": "My Favorites",
+  "favoriteEvents": "Favorite Events ({{count}})",
+  "findAllFavorites": "Find all your favorite events",
+  "noFavoritesTitle": "No favorites yet",
+  "noFavoritesDescription": "Add events to your favorites to find them easily here",
+  "exploreTip": "Explore events and add your favorites!"
+}

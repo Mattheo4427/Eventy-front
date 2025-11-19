@@ -49,21 +49,21 @@ export function FavoritesManager({
       <Text style={styles.emptyIcon}>❤️</Text>
       <Text style={styles.emptyTitle}>Aucun favori</Text>
       <Text style={styles.emptyMessage}>
-        {t('favorites.noFavoritesDescription')}{"\n"}
-        {t('favorites.exploreTip')}
+        {t('favorites.noFavoritesDescription', { ns: 'favorites' })}{"\n"}
+        {t('favorites.exploreTip', { ns: 'favorites' })}
       </Text>
     </View>
   );
 
   return (
-    <CustomModal visible={visible} onClose={onClose} title={t('favorites.myFavorites')}>
+    <CustomModal visible={visible} onClose={onClose} title={t('myFavorites', { ns: 'favorites' })}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>
-            {t('favorites.favoriteEvents', { count: favoriteEventsList.length })}
+            {t('favoriteEvents', { count: favoriteEventsList.length, ns: 'favorites' })}
           </Text>
           <Text style={styles.subtitle}>
-            {t('favorites.findAllFavorites')}
+            {t('findAllFavorites', { ns: 'favorites' })}
           </Text>
         </View>
 
@@ -71,9 +71,9 @@ export function FavoritesManager({
           {favoriteEventsList.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>⭐</Text>
-              <Text style={styles.emptyText}>{t('favorites.noFavoritesTitle')}</Text>
+              <Text style={styles.emptyText}>{t('noFavoritesTitle', { ns: 'favorites' })}</Text>
               <Text style={styles.emptySubtext}>
-                {t('favorites.noFavoritesDescription')}
+                {t('noFavoritesDescription', { ns: 'favorites' })}
               </Text>
             </View>
           ) : (

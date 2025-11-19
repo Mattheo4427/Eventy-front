@@ -1,0 +1,16 @@
+{
+  "title": "Vendre un billet",
+  "event": "Événement",
+  "salePrice": "Prix de vente",
+  "originalPrice": "Prix original",
+  "description": "Description (optionnelle)",
+  "selectEvent": "Sélectionner un événement",
+  "chooseEvent": "Choisissez un événement",
+  "buyersSave": "💰 Les acheteurs économiseront {{amount}}€",
+  "priceHigher": "⚠️ Prix supérieur au prix original (+{{amount}}€)",
+  "putOnSale": "Mettre en vente",
+  "publishing": "Publication...",
+  "errorTitle": "Erreur",
+  "invalidPrices": "Veuillez entrer des prix valides",
+  "priceLimit": "Le prix de vente ne peut pas dépasser 150% du prix original"
+}

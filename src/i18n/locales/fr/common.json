@@ -1,0 +1,10 @@
+{
+  "price": "{{amount}}€",
+  "error": "Erreur",
+  "success": "Succès",
+  "loading": "Chargement...",
+  "save": "Enregistrer",
+  "cancel": "Annuler",
+  "confirm": "Confirmer",
+  "close": "Fermer"
+}

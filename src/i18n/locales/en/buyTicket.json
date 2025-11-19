@@ -1,0 +1,11 @@
+{
+  "title": "Buy a ticket",
+  "confirmPurchase": "Confirm purchase",
+  "confirmMessage": "Do you really want to buy this ticket for {{price}}?",
+  "priceSummary": "Price summary",
+  "ticketPrice": "Ticket price",
+  "savings": "Savings",
+  "originalPrice": "Original price",
+  "totalToPay": "Total to pay",
+  "cancel": "Cancel"
+}

@@ -131,7 +131,7 @@ export function Header({
           <View style={styles.drawer}>
             {/* En-tête du drawer */}
             <View style={styles.drawerHeader}>
-              <Text style={styles.drawerTitle}>{t('navigation.home')}</Text>
+              <Text style={styles.drawerTitle}>{t('home', { ns: 'navigation' })}</Text>
               <TouchableOpacity 
                 onPress={() => setIsDrawerOpen(false)}
                 style={styles.closeButton}
@@ -143,15 +143,15 @@ export function Header({
             <ScrollView style={styles.drawerContent}>
               {/* Main navigation */}
               <View style={styles.drawerSection}>
-                <Text style={styles.drawerSectionTitle}>{t('navigation.home')}</Text>
+                <Text style={styles.drawerSectionTitle}>{t('home', { ns: 'navigation' })}</Text>
                 <NavigationItem
-                  title={t('navigation.home')}
+                  title={t('home', { ns: 'navigation' })}
                   onPress={() => handleNavigate('home')}
                   isActive={currentView === 'home'}
                   icon="home-outline"
                 />
                 <NavigationItem
-                  title={t('navigation.events')}
+                  title={t('events', { ns: 'navigation' })}
                   onPress={() => handleNavigate('events')}
                   isActive={currentView === 'events'}
                   icon="calendar-outline"
@@ -159,7 +159,7 @@ export function Header({
                 
                 {currentUser && (
                   <NavigationItem
-                    title={t('navigation.myProfile')}
+                    title={t('myProfile', { ns: 'navigation' })}
                     onPress={() => handleNavigate('profile')}
                     isActive={currentView === 'profile'}
                     icon="person-outline"
@@ -168,7 +168,7 @@ export function Header({
                 
                 {currentUser?.role === 'admin' && (
                   <NavigationItem
-                    title={t('navigation.administration')}
+                    title={t('administration', { ns: 'navigation' })}
                     onPress={() => handleNavigate('admin')}
                     isActive={currentView === 'admin'}
                     icon="settings-outline"
@@ -179,7 +179,7 @@ export function Header({
               {/* Features */}
               {currentUser && (
                 <View style={styles.drawerSection}>
-                  <Text style={styles.drawerSectionTitle}>{t('navigation.features')}</Text>
+                  <Text style={styles.drawerSectionTitle}>{t('features', { ns: 'navigation' })}</Text>
                   
                   {onShowFavorites && (
                     <TouchableOpacity 
@@ -190,7 +190,7 @@ export function Header({
                       style={styles.drawerItem}
                     >
                       <Ionicons name="heart-outline" size={24} color="#374151" />
-                      <Text style={styles.drawerItemText}>{t('navigation.myFavorites')}</Text>
+                      <Text style={styles.drawerItemText}>{t('myFavorites', { ns: 'navigation' })}</Text>
                     </TouchableOpacity>
                   )}
                   
@@ -210,7 +210,7 @@ export function Header({
                           </View>
                         )}
                       </View>
-                      <Text style={styles.drawerItemText}>{t('navigation.messages')}</Text>
+                      <Text style={styles.drawerItemText}>{t('messages', { ns: 'navigation' })}</Text>
                     </TouchableOpacity>
                   )}
                   
@@ -230,7 +230,7 @@ export function Header({
                           </View>
                         )}
                       </View>
-                      <Text style={styles.drawerItemText}>{t('navigation.notifications')}</Text>
+                      <Text style={styles.drawerItemText}>{t('notifications', { ns: 'navigation' })}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -238,7 +238,7 @@ export function Header({
 
               {/* Authentication */}
               <View style={styles.drawerSection}>
-                <Text style={styles.drawerSectionTitle}>{t('navigation.account')}</Text>
+                <Text style={styles.drawerSectionTitle}>{t('account', { ns: 'navigation' })}</Text>
                 {currentUser ? (
                   <>
                     <View style={styles.userInfo}>
@@ -256,7 +256,7 @@ export function Header({
                       style={styles.logoutButton}
                     >
                       <Ionicons name="log-out-outline" size={24} color="#dc2626" />
-                      <Text style={styles.logoutText}>{t('navigation.logout')}</Text>
+                      <Text style={styles.logoutText}>{t('logout', { ns: 'navigation' })}</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -267,8 +267,7 @@ export function Header({
                     }} 
                     style={styles.loginButton}
                   >
-                    <Ionicons name="log-in-outline" size={24} color="#2563eb" />
-                    <Text style={styles.loginText}>{t('navigation.login')}</Text>
+                    <Text style={styles.loginText}>{t('login', { ns: 'navigation' })}</Text>
                   </TouchableOpacity>
                 )}
               </View>

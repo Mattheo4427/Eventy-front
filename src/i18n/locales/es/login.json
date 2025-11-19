@@ -1,0 +1,14 @@
+{
+  "title": "Iniciar sesión",
+  "redirectInfo": "Será redirigido a nuestro portal de inicio de sesión seguro.",
+  "continue": "Continuar al inicio de sesión",
+  "login": "Iniciar sesión",
+  "close": "Cerrar",
+  "username": "Usuario",
+  "password": "Contraseña",
+  "usernamePlaceholder": "Ingrese su usuario",
+  "passwordPlaceholder": "Ingrese su contraseña",
+  "unavailable": "Autenticación no disponible",
+  "unavailableMessage": "El sistema de autenticación aún no está implementado. Esta función estará disponible en una futura actualización.",
+  "comingSoon": "Función de autenticación próximamente disponible"
+}

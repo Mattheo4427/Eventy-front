@@ -1,0 +1,14 @@
+{
+  "title": "Login",
+  "redirectInfo": "You will be redirected to our secure login portal.",
+  "continue": "Continue to login",
+  "login": "Login",
+  "close": "Close",
+  "username": "Username",
+  "password": "Password",
+  "usernamePlaceholder": "Enter your username",
+  "passwordPlaceholder": "Enter your password",
+  "unavailable": "Authentication Not Available",
+  "unavailableMessage": "The authentication system is not yet implemented. This feature will be available in a future update.",
+  "comingSoon": "Authentication feature coming soon"
+}

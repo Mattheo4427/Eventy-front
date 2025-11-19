@@ -1,0 +1,11 @@
+{
+  "title": "Acheter un billet",
+  "confirmPurchase": "Confirmer l'achat",
+  "confirmMessage": "Voulez-vous vraiment acheter ce billet pour {{price}} ?",
+  "priceSummary": "Résumé des prix",
+  "ticketPrice": "Prix du billet",
+  "savings": "Économies",
+  "originalPrice": "Prix original",
+  "totalToPay": "Total à payer",
+  "cancel": "Annuler"
+}
