@@ -352,7 +352,7 @@ export default function App() {
       id: email.includes('admin') ? 'admin1' : `user_${Date.now()}`,
       name: email.includes('admin') ? 'Admin' : 'Utilisateur Test',
       email: email,
-      role: email.includes('admin') ? 'admin' : 'user',
+      role: email.includes('admin') ? 'ADMIN' : 'USER',
       phone: '+33 6 12 34 56 78'
     };
     setCurrentUser(mockUser);

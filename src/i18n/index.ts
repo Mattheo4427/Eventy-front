@@ -9,6 +9,7 @@ import eventDetail_en from './locales/en/eventDetail.json';
 import buyTicket_en from './locales/en/buyTicket.json';
 import sellTicket_en from './locales/en/sellTicket.json';
 import userProfile_en from './locales/en/userProfile.json';
+import userProfileScreen_en from './locales/en/userProfileScreen.json';
 import messaging_en from './locales/en/messaging.json';
 import notifications_en from './locales/en/notifications.json';
 import favorites_en from './locales/en/favorites.json';
@@ -22,6 +23,7 @@ import eventDetail_fr from './locales/fr/eventDetail.json';
 import buyTicket_fr from './locales/fr/buyTicket.json';
 import sellTicket_fr from './locales/fr/sellTicket.json';
 import userProfile_fr from './locales/fr/userProfile.json';
+import userProfileScreen_fr from './locales/fr/userProfileScreen.json';
 import messaging_fr from './locales/fr/messaging.json';
 import notifications_fr from './locales/fr/notifications.json';
 import favorites_fr from './locales/fr/favorites.json';
@@ -35,6 +37,7 @@ import eventDetail_es from './locales/es/eventDetail.json';
 import buyTicket_es from './locales/es/buyTicket.json';
 import sellTicket_es from './locales/es/sellTicket.json';
 import userProfile_es from './locales/es/userProfile.json';
+import userProfileScreen_es from './locales/es/userProfileScreen.json';
 import messaging_es from './locales/es/messaging.json';
 import notifications_es from './locales/es/notifications.json';
 import favorites_es from './locales/es/favorites.json';
@@ -53,6 +56,7 @@ export const resources = {
     buyTicket: buyTicket_en,
     sellTicket: sellTicket_en,
     userProfile: userProfile_en,
+    userProfileScreen: userProfileScreen_en,
     messaging: messaging_en,
     notifications: notifications_en,
     favorites: favorites_en,
@@ -67,6 +71,7 @@ export const resources = {
     buyTicket: buyTicket_fr,
     sellTicket: sellTicket_fr,
     userProfile: userProfile_fr,
+    userProfileScreen: userProfileScreen_fr,
     messaging: messaging_fr,
     notifications: notifications_fr,
     favorites: favorites_fr,
@@ -81,6 +86,7 @@ export const resources = {
     buyTicket: buyTicket_es,
     sellTicket: sellTicket_es,
     userProfile: userProfile_es,
+    userProfileScreen: userProfileScreen_es,
     messaging: messaging_es,
     notifications: notifications_es,
     favorites: favorites_es,

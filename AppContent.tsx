@@ -403,7 +403,7 @@ export default function AppContent() {
           />
         );
       case 'admin':
-        if (!currentUser || currentUser.role !== 'admin') {
+        if (!currentUser || currentUser.role !== 'ADMIN') {
           setCurrentView('home');
           return null;
         }
@@ -523,7 +523,7 @@ export default function AppContent() {
           />
         )}
 
-        {currentUser?.role === 'admin' && (
+        {currentUser?.role === 'ADMIN' && (
           <ReportManagement
             visible={showReportManagement}
             onClose={() => setShowReportManagement(false)}

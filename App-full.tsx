@@ -104,7 +104,7 @@ export default function App() {
       id: '1',
       name: 'Utilisateur Test',
       email: email,
-      role: email.includes('admin') ? 'admin' : 'user',
+      role: email.includes('admin') ? 'ADMIN' : 'USER',
       phone: '+33 6 12 34 56 78'
     };
     setCurrentUser(mockUser);
@@ -206,7 +206,7 @@ export default function App() {
           />
         );
       case 'admin':
-        if (!currentUser || currentUser.role !== 'admin') return null;
+        if (!currentUser || currentUser.role !== 'ADMIN') return null;
         return (
           <AdminPanel 
             tickets={tickets}
