@@ -175,7 +175,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
                 <Text style={styles.emptyTitle}>{t('empty_title', { ns: 'userProfileScreen' })}</Text>
                 <Text style={styles.emptyText}>
                   {t('empty_text', { ns: 'userProfileScreen' })}
-                </Text>
+                git remote add dokku dokku@your-dokku-server:eventy-frontend                </Text>
               </View>
             )}
           </CardContent>
