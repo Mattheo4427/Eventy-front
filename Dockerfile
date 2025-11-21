@@ -5,37 +5,32 @@ FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# Copier uniquement les fichiers de dépendances
+# Copy dependency files only
 COPY package.json package-lock.json ./
 
-# Installer les dépendances de production
-RUN npm ci --only=production --ignore-scripts && \
+# Install dependencies
+RUN npm ci --ignore-scripts && \
     npm cache clean --force
 
 # ===================================
-# Stage 2: Development (Expo Go)
+# Stage 2: Builder (Expo Web)
 # ===================================
-FROM node:20-alpine AS development
-
-# Installer les outils nécessaires pour Expo
-RUN apk add --no-cache git
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 
-# Installer toutes les dépendances
-RUN npm ci --ignore-scripts
-
-# Copier les fichiers de configuration
+# Copy configuration files
 COPY app.json ./
 COPY tsconfig.json ./
 COPY metro.config.js ./
 COPY tailwind.config.js ./
 COPY index.ts ./
 
-# Copier le code source
+# Copy source code
 COPY App.tsx ./
 COPY App-enhanced.tsx ./
 COPY App-full.tsx ./
@@ -44,16 +39,24 @@ COPY global.css ./
 COPY assets/ ./assets/
 COPY src/ ./src/
 
-# Exposer les ports Expo
-# 8081: Metro bundler
-# 19000: Expo dev server
-# 19001: Expo dev tools
-EXPOSE 8081 19000 19001
+# Build for web
+RUN npx expo export:web
 
-# Variables d'environnement pour Expo
-# Permet d'accéder à Expo depuis l'extérieur du container
-ENV EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
-ENV REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+# ===================================
+# Stage 3: Production (Nginx)
+# ===================================
+FROM nginx:alpine AS production
 
-# Commande par défaut
-CMD ["npm", "start", "--", "--host", "0.0.0.0"]
+# Copy build output
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 8081
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8081/health || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
