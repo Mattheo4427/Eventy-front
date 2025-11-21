@@ -40,7 +40,7 @@ COPY assets/ ./assets/
 COPY src/ ./src/
 
 # Build for web
-RUN npx expo export:web
+RUN npx expo build:web
 
 # ===================================
 # Stage 3: Production (Nginx)
