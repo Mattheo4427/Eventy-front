@@ -6,6 +6,7 @@ export interface User {
   phone?: string;
 }
 
+/** 
 export interface Event {
   id: string;
   title: string;
@@ -16,7 +17,27 @@ export interface Event {
   image: string;
   venue: string;
 }
+*/
 
+export interface Event {
+  id: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  fullAddress?: string;
+  imageUrl?: string;
+  status: 'active' | 'canceled' | 'full';
+  typeLabel?: string;
+  categoryLabel?: string;
+  priceRange?: string; // Pour affichage (ex: "30€ - 50€")
+}
+
+export interface EventCategory {
+  categoryId: string;
+  label: string;
+}
 export interface Ticket {
   id: string;
   eventId: string;
@@ -28,6 +49,7 @@ export interface Ticket {
   row: string;
   seat: string;
   description?: string;
+  salePrice: number;
   status: 'available' | 'sold' | 'pending';
 }
 

@@ -111,7 +111,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
                     <View key={ticket.id} style={styles.ticketItem}>
                       <View style={styles.ticketHeader}>
                         <Text style={styles.ticketEvent}>
-                          {event?.title || 'Événement inconnu'}
+                          {event?.name || 'Événement inconnu'}
                         </Text>
                         <View style={[
                           styles.statusBadge,
@@ -147,7 +147,7 @@ export function UserProfile({ user, tickets, events }: UserProfileProps) {
                           <View style={styles.metaItem}>
                             <Ionicons name="calendar-outline" size={14} color="#6b7280" />
                             <Text style={styles.metaText}>
-                              {new Date(event.date).toLocaleDateString('fr-FR')}
+                              {new Date(event.startDate).toLocaleDateString('fr-FR')}
                             </Text>
                           </View>
                           <View style={styles.metaItem}>

@@ -1,194 +1,122 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Event, FavoriteEvent } from '../types';
-import { Button } from './ui/Button';
-import { FavoriteButton } from './FavoritesManager';
+import { Event } from '../types';
 
 interface EventCardProps {
   event: Event;
   onViewEvent: (eventId: string) => void;
-  isFavorite?: boolean;
-  onToggleFavorite?: (eventId: string) => void;
-  showFavoriteButton?: boolean;
+  
 }
 
-export const EventCard: React.FC<EventCardProps> = ({
-  event,
-  onViewEvent,
-  isFavorite = false,
-  onToggleFavorite,
-  showFavoriteButton = false
-}) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, onViewEvent }) => {
+  
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'Date inconnue';
     return new Date(dateString).toLocaleDateString('fr-FR', {
-      weekday: 'short',
-      year: 'numeric',
+      day: 'numeric',
       month: 'short',
-      day: 'numeric'
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
-  const isEventPassed = (dateString: string) => {
-    return new Date(dateString) < new Date();
-  };
-
-  const isPassed = isEventPassed(event.date);
-
   return (
-    <View style={[styles.eventCard, isPassed && styles.eventCardPassed]}>
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: event.image }} style={styles.eventImage} resizeMode="cover" />
-        {showFavoriteButton && onToggleFavorite && (
-          <View style={styles.favoriteButtonContainer}>
-            <FavoriteButton
-              eventId={event.id}
-              isFavorite={isFavorite}
-              onToggleFavorite={onToggleFavorite}
-              size="md"
-            />
-          </View>
-        )}
-        {isPassed && (
-          <View style={styles.passedOverlay}>
-            <Text style={styles.passedText}>Événement passé</Text>
-          </View>
-        )}
-      </View>
+    <TouchableOpacity 
+      style={styles.card} 
+      onPress={() => onViewEvent(event.id)}
+      activeOpacity={0.7}
+    >
+      <Image 
+        source={{ uri: event.imageUrl || 'https://via.placeholder.com/400x200?text=Eventy' }} 
+        style={styles.image}
+        resizeMode="cover"
+      />
       
-      <View style={styles.eventInfo}>
-        <View style={styles.eventHeader}>
-          <Text style={styles.eventTitle} numberOfLines={2}>
-            {event.title}
-          </Text>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{event.category}</Text>
-          </View>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title} numberOfLines={1}>{event.name}</Text>
+          {event.status !== 'active' && (
+            <View style={[styles.badge, event.status === 'canceled' ? styles.badgeRed : styles.badgeOrange]}>
+              <Text style={styles.badgeText}>{event.status}</Text>
+            </View>
+          )}
         </View>
-        
-        <Text style={styles.eventDate}>
-          📅 {formatDate(event.date)}
-        </Text>
-        
-        <Text style={styles.eventLocation}>
-          📍 {event.location} - {event.venue}
-        </Text>
-        
-        <Text style={styles.eventDescription} numberOfLines={3}>
-          {event.description}
-        </Text>
-        
-        <View style={styles.actionContainer}>
-          <Button
-            title={isPassed ? "Voir les détails" : "Voir les billets"}
-            onPress={() => onViewEvent(event.id)}
-            variant={isPassed ? "outline" : "primary"}
-            size="sm"
-            style={styles.viewButton}
-          />
+
+        {event.categoryLabel && (
+          <Text style={styles.category}>{event.categoryLabel}</Text>
+        )}
+
+        <View style={styles.infoRow}>
+          <Ionicons name="calendar-outline" size={16} color="#6b7280" />
+          <Text style={styles.infoText}>{formatDate(event.startDate)}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Ionicons name="location-outline" size={16} color="#6b7280" />
+          <Text style={styles.infoText} numberOfLines={1}>{event.location}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  eventCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginBottom: 24,
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 3,
     overflow: 'hidden',
   },
-  eventCardPassed: {
-    opacity: 0.7,
-  },
-  imageContainer: {
-    position: 'relative',
-    height: 200,
-  },
-  eventImage: {
+  image: {
     width: '100%',
-    height: '100%',
-    backgroundColor: '#f3f4f6',
+    height: 150,
+    backgroundColor: '#e5e7eb',
   },
-  favoriteButtonContainer: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
+  content: {
+    padding: 12,
   },
-  passedOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  passedText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  eventInfo: {
-    padding: 20,
-  },
-  eventHeader: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 4,
   },
-  eventTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#111827',
-    marginRight: 12,
-    lineHeight: 28,
+    flex: 1,
+    marginRight: 8,
   },
-  categoryBadge: {
-    backgroundColor: '#dbeafe',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  categoryText: {
+  category: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#1e40af',
-  },
-  eventDate: {
-    fontSize: 16,
-    fontWeight: '600',
     color: '#2563eb',
+    fontWeight: '600',
     marginBottom: 8,
+    textTransform: 'uppercase',
   },
-  eventLocation: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 12,
-  },
-  eventDescription: {
-    fontSize: 14,
-    color: '#374151',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  actionContainer: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginTop: 4,
   },
-  viewButton: {
-    flex: 1,
+  infoText: {
+    marginLeft: 6,
+    color: '#4b5563',
+    fontSize: 14,
   },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  badgeRed: { backgroundColor: '#fee2e2' },
+  badgeOrange: { backgroundColor: '#ffedd5' },
+  badgeText: { fontSize: 10, fontWeight: 'bold', color: '#374151' }
 });

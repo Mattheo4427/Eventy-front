@@ -78,27 +78,27 @@ export function FavoritesManager({
             </View>
           ) : (
             favoriteEventsList.map((event) => {
-              const isPassed = isEventPassed(event.date);
+              const isPassed = isEventPassed(event.startDate);
               return (
                 <View key={event.id} style={styles.eventItem}>
                   <Image
-                    source={{ uri: event.image }}
+                    source={{ uri: event.imageUrl }}
                     style={styles.eventImage}
                     resizeMode="cover"
                   />
                   <View style={styles.eventContent}>
                     <View style={styles.eventInfo}>
                       <Text style={styles.eventTitle} numberOfLines={2}>
-                        {event.title}
+                        {event.name}
                       </Text>
                       <Text style={styles.eventDate}>
-                        {formatDate(event.date)}
+                        {formatDate(event.startDate)}
                       </Text>
                       <Text style={styles.eventLocation}>
-                        📍 {event.location} - {event.venue}
+                        📍 {event.location} - {event.location}
                       </Text>
                       <Text style={styles.eventCategory}>
-                        {event.category}
+                        {event.categoryLabel}
                       </Text>
                       {isPassed && (
                         <View style={styles.passedBadge}>

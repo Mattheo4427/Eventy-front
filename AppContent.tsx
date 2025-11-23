@@ -36,6 +36,7 @@ import {
   FavoriteService
 } from './src/services/NotificationService';
 import { useAuth } from './src/contexts/AuthContext'; // Import corrigé
+import { EventService } from './src/services/EventService';
 
 export default function AppContent() {
   // === MODIFICATION ===
@@ -176,7 +177,8 @@ export default function AppContent() {
       row: ticketData.row,
       seat: ticketData.seat,
       description: ticketData.description,
-      status: 'available'
+      status: 'available',
+      salePrice: ticketData.price
     };
     
     setTickets(prev => [...prev, newTicket]);
@@ -188,7 +190,7 @@ export default function AppContent() {
       const notification = NotificationService.createSystemNotification(
         currentUser.id,
         'Billet mis en vente',
-        `Votre billet pour "${event.title}" est maintenant en ligne !`
+        `Votre billet pour "${event.name}" est maintenant en ligne !`
       );
       addNotification(notification);
     }
@@ -356,15 +358,18 @@ export default function AppContent() {
             onNavigateToEvents={() => setCurrentView('events')}
           />
         );
-      case 'events':
+    case 'events':
         return (
           <EventList 
-            events={events}
+            // EventList gère maintenant son propre chargement de données via le Service
+            // Mais si vous passez des props, assurez-vous qu'elles matchent
+            // Si EventList est autonome (comme codé précédemment), vous n'avez peut-être plus besoin de passer 'events' ici
+            // Vérifiez la signature de votre composant EventList mis à jour.
+            // Si EventList attend des props:
+            /* events={events} */
             onViewEvent={handleViewEvent}
-            onSellTicket={handleSellTicket}
-            // @ts-ignore
-            favoriteEvents={userFavorites}
-            onToggleFavorite={toggleFavorite}
+           /* onSellTicket={handleSellTicket}
+            */
           />
         );
       case 'event-detail':
@@ -372,18 +377,11 @@ export default function AppContent() {
         return (
           <EventDetail 
             event={selectedEvent}
+            // Filtrer les tickets compatibles avec le nouveau modèle
             tickets={tickets.filter(t => t.eventId === selectedEvent.id && t.status === 'available')}
             onBuyTicket={handleBuyTicket}
             onBack={() => setCurrentView('events')}
-            // @ts-ignore
-            isFavorite={currentUser ? FavoriteService.isFavorite(userFavorites, currentUser.id, selectedEvent.id) : false}
-            onToggleFavorite={() => toggleFavorite(selectedEvent.id)}
-            onReportEvent={() => openReportModal('event', selectedEvent.id, selectedEvent.title)}
-            onReportTicket={(ticketId: string, ticketName: string) => openReportModal('ticket', ticketId, ticketName)}
-            onContactSeller={(sellerId: string) => {
-              const conversationId = createConversation(sellerId);
-              if (conversationId) setShowMessaging(true);
-            }}
+            // ... autres props
           />
         );
       case 'profile':
@@ -446,9 +444,9 @@ export default function AppContent() {
           onShowFavorites={() => setShowFavorites(true)}
         />
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.content} /*showsVerticalScrollIndicator={false}*/>
           {renderContent()}
-        </ScrollView>
+        </View>
 
         {/* Modals */}
         <LoginModal 
