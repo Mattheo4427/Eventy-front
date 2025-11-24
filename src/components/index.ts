@@ -15,3 +15,6 @@ export { MessagingCenter } from './MessagingCenter';
 export { FavoritesManager, FavoriteButton } from './FavoritesManager';
 export { ReportModal, ReportManagement } from './ReportSystem';
 export { EventCard } from './EventCard';
+export { CreateEventModal } from './CreateEventModal';
+export { EditEventModal } from './EditEventModal';
+export { CategoryModal } from './CategoryModal';

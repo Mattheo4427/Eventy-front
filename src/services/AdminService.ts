@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Event, Ticket, User } from '../types';
+import { Event, EventCategory, Ticket, User } from '../types';
 import { apiConfig } from '../config';
 import * as SecureStore from 'expo-secure-store'; // Import nécessaire pour récupérer le token
 
@@ -53,6 +53,11 @@ export const AdminService = {
     await api.delete(`/events/${eventId}`);
   },
 
+  updateEvent: async (id: string, data: any): Promise<Event> => {
+    const response = await api.put<Event>(`/events/${id}`, data);
+    return response.data;
+  },
+
   // --- Gestion Tickets ---
   getAllTickets: async (): Promise<Ticket[]> => {
     // Supposons un endpoint admin qui liste tout
@@ -66,5 +71,21 @@ export const AdminService = {
     // Backend: GET /api/users
     const response = await api.get<User[]>('/users');
     return response.data;
+  },
+  createCategory: async (label: string): Promise<EventCategory> => {
+    // POST /api/event-categories
+    const response = await api.post<EventCategory>('/event-categories', { label });
+    return response.data;
+  },
+
+  updateCategory: async (id: string, label: string): Promise<EventCategory> => {
+    // PUT /api/event-categories/{id}
+    const response = await api.put<EventCategory>(`/event-categories/${id}`, { label });
+    return response.data;
+  },
+
+  deleteCategory: async (id: string): Promise<void> => {
+    // DELETE /api/event-categories/{id}
+    await api.delete(`/event-categories/${id}`);
   }
 };

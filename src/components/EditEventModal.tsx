@@ -4,79 +4,103 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { AdminService } from '../services/AdminService';
 import { EventService } from '../services/EventService';
-import { EventCategory } from '../types';
+import { Event, EventCategory } from '../types';
 
-interface CreateEventModalProps {
+interface EditEventModalProps {
   visible: boolean;
+  event: Event | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function CreateEventModal({ visible, onClose, onSuccess }: CreateEventModalProps) {
+export function EditEventModal({ visible, event, onClose, onSuccess }: EditEventModalProps) {
   const [form, setForm] = useState({
     name: '',
     description: '',
     location: '',
-    fullAddress: '', // Nouveau champ
+    fullAddress: '',
     startDate: '',
     endDate: '',
     imageUrl: '',
-    eventTypeId: '11111111-1111-1111-1111-111111111111', // ID Concert par défaut (à rendre dynamique si besoin)
-    categoryId: '' // Sera rempli par la sélection
+    eventTypeId: '',
+    categoryId: ''
   });
   
   const [categories, setCategories] = useState<EventCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // Charger les catégories au montage
+  // Charger les catégories
   useEffect(() => {
     const loadCategories = async () => {
       try {
         const data = await EventService.getCategories();
         setCategories(data);
-        // Sélectionner la première catégorie par défaut si disponible
-        if (data.length > 0) {
-          setForm(prev => ({ ...prev, categoryId: data[0].categoryId }));
-        }
       } catch (error) {
         console.error("Erreur chargement catégories", error);
       } finally {
         setLoadingCategories(false);
       }
     };
-
-    if (visible) {
-      loadCategories();
-    }
+    if (visible) loadCategories();
   }, [visible]);
 
-  const handleSubmit = async () => {
-    if (!form.categoryId) {
-      alert("Veuillez sélectionner une catégorie");
-      return;
-    }
+  // Pré-remplir le formulaire quand l'événement change
+  useEffect(() => {
+    if (event) {
+      // On extrait la date "YYYY-MM-DD" de la chaîne ISO complète pour l'affichage
+      const formatDate = (dateStr: string) => dateStr ? dateStr.split('T')[0] : '';
 
+      // Pour retrouver l'ID de la catégorie, on doit parfois chercher dans la liste
+      // car l'objet Event contient souvent categoryLabel mais pas l'ID direct.
+      // Idéalement, le backend devrait renvoyer categoryId dans l'objet Event.
+      // Si ce n'est pas le cas, on devra se baser sur le label ou adapter le backend.
+      // Ici, on suppose que l'objet Event contient un champ categoryId (à ajouter au type si manquant)
+      // ou on fait une recherche inverse sur le label.
+      
+      setForm({
+        name: event.name,
+        description: event.description,
+        location: event.location,
+        fullAddress: event.fullAddress || '',
+        startDate: formatDate(event.startDate),
+        endDate: formatDate(event.endDate),
+        imageUrl: event.imageUrl || '',
+        eventTypeId: '11111111-1111-1111-1111-111111111111', // Placeholder
+        // @ts-ignore : Si categoryId n'est pas dans le type Event, on utilisera le label pour trouver l'id
+        categoryId: (event as any).categoryId || '' 
+      });
+    }
+  }, [event]);
+
+  // Recherche inverse de l'ID catégorie si manquant dans l'event (fallback)
+  useEffect(() => {
+    if (event && categories.length > 0 && !form.categoryId && event.categoryLabel) {
+      const found = categories.find(c => c.label === event.categoryLabel);
+      if (found) setForm(prev => ({ ...prev, categoryId: found.categoryId }));
+    }
+  }, [event, categories]);
+
+  const handleSubmit = async () => {
+    if (!event) return;
     setLoading(true);
     try {
       const payload = {
         ...form,
-        startDate: form.startDate.includes('T') ? form.startDate : `${form.startDate}T20:00:00`,
-        endDate: form.endDate.includes('T') ? form.endDate : `${form.endDate}T23:00:00`,
-        creatorId: 'b95257b7-6f15-4f0d-94ad-835376ae806d' // À remplacer par l'ID de l'admin connecté via AuthContext
+        // Reconstruire le format ISO pour le backend
+        startDate: form.startDate.includes('T') ? form.startDate : `${form.startDate}T00:00:00`,
+        endDate: form.endDate.includes('T') ? form.endDate : `${form.endDate}T23:59:59`,
       };
       
-      await AdminService.createEvent(payload);
+      // Appel au service de mise à jour
+      // @ts-ignore
+      await AdminService.updateEvent(event.id, payload);
+      
       onSuccess();
-      setForm({ // Reset form
-        name: '', description: '', location: '', fullAddress: '',
-        startDate: '', endDate: '', imageUrl: '',
-        eventTypeId: '11111111-1111-1111-1111-111111111111', categoryId: ''
-      });
       onClose();
     } catch (error) {
-      console.error("Erreur création", error);
-      alert("Erreur lors de la création");
+      console.error("Erreur modification", error);
+      alert("Erreur lors de la modification");
     } finally {
       setLoading(false);
     }
@@ -85,29 +109,28 @@ export function CreateEventModal({ visible, onClose, onSuccess }: CreateEventMod
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
-        <Text style={styles.title}>Créer un événement</Text>
+        <Text style={styles.title}>Modifier l'événement</Text>
         
         <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-          <Input label="Nom" value={form.name} onChangeText={t => setForm({...form, name: t})} placeholder="Concert..." />
+          <Input label="Nom" value={form.name} onChangeText={t => setForm({...form, name: t})} />
           <Input label="Description" value={form.description} onChangeText={t => setForm({...form, description: t})} multiline />
-          <Input label="Lieu (Ville)" value={form.location} onChangeText={t => setForm({...form, location: t})} />
-          <Input label="Adresse complète" value={form.fullAddress} onChangeText={t => setForm({...form, fullAddress: t})} placeholder="123 Rue de la Paix..." />
+          <Input label="Lieu" value={form.location} onChangeText={t => setForm({...form, location: t})} />
+          <Input label="Adresse complète" value={form.fullAddress} onChangeText={t => setForm({...form, fullAddress: t})} />
           
           <View style={styles.row}>
             <View style={{ flex: 1, marginRight: 8 }}>
-              <Input label="Date Début (YYYY-MM-DD)" value={form.startDate} onChangeText={t => setForm({...form, startDate: t})} />
+              <Input label="Date Début" value={form.startDate} onChangeText={t => setForm({...form, startDate: t})} placeholder="YYYY-MM-DD" />
             </View>
             <View style={{ flex: 1, marginLeft: 8 }}>
-              <Input label="Date Fin (YYYY-MM-DD)" value={form.endDate} onChangeText={t => setForm({...form, endDate: t})} />
+              <Input label="Date Fin" value={form.endDate} onChangeText={t => setForm({...form, endDate: t})} placeholder="YYYY-MM-DD" />
             </View>
           </View>
 
           <Input label="Image URL" value={form.imageUrl} onChangeText={t => setForm({...form, imageUrl: t})} />
           
-          {/* Sélection des catégories */}
           <Text style={styles.label}>Catégorie</Text>
           {loadingCategories ? (
-            <ActivityIndicator size="small" color="#2563eb" />
+            <ActivityIndicator />
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
               {categories.map(cat => (
@@ -130,7 +153,7 @@ export function CreateEventModal({ visible, onClose, onSuccess }: CreateEventMod
             </ScrollView>
           )}
 
-          <Button title={loading ? "Création..." : "Valider"} onPress={handleSubmit} disabled={loading} style={{ marginTop: 20 }} />
+          <Button title={loading ? "Modification..." : "Enregistrer"} onPress={handleSubmit} disabled={loading} style={{ marginTop: 20 }} />
           <Button title="Annuler" onPress={onClose} variant="outline" style={{ marginTop: 10, marginBottom: 30 }} />
         </ScrollView>
       </View>

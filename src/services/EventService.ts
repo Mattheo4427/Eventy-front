@@ -55,8 +55,8 @@ export const EventService = {
   getCategories: async (): Promise<EventCategory[]> => {
     try {
         // TODO: Décommenter quand le endpoint sera prêt
-        // const response = await api.get<EventCategory[]>('/event-categories');
-        // return response.data;
+         const response = await api.get<EventCategory[]>('/event-categories');
+         return response.data;
         
         // Mock temporaire pour tester l'UI
         return [

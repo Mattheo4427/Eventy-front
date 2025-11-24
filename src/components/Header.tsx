@@ -166,7 +166,7 @@ export function Header({
                   />
                 )}
                 
-                {currentUser?.role === 'admin' && (
+                {currentUser?.role === 'ADMIN' && (
                   <NavigationItem
                     title={t('administration', { ns: 'navigation' })}
                     onPress={() => handleNavigate('admin')}
