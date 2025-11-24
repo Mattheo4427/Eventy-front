@@ -49,6 +49,11 @@ export default function AppContent() {
     token // Récupère le token pour les appels API (à utiliser plus tard)
   } = useAuth();
   // ====================
+  useEffect(() => {
+    if (currentUser?.role === 'ADMIN') {
+      setCurrentView('admin');
+    }
+  }, [currentUser]);
   
   const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail' | 'profile' | 'admin'>('home');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -401,21 +406,14 @@ export default function AppContent() {
           />
         );
       case 'admin':
-        if (!currentUser || currentUser.role !== 'admin') {
+        if (!currentUser || currentUser.role !== 'ADMIN') {
           setCurrentView('home');
           return null;
         }
         return (
           <AdminPanel 
-            tickets={tickets}
-            events={events}
-            onUpdateTicket={(ticketId: string, status: 'available' | 'sold' | 'pending') => {
-              setTickets(prev => prev.map(ticket => 
-                ticket.id === ticketId ? { ...ticket, status } : ticket
-              ));
-            }}
-            // @ts-ignore
-            onViewReports={() => setShowReportManagement(true)}
+            // Vous n'avez plus besoin de passer ces props si AdminPanel est autonome via AdminService
+            // Sinon, adaptez selon votre implémentation de AdminPanel
           />
         );
       default:
@@ -521,7 +519,7 @@ export default function AppContent() {
           />
         )}
 
-        {currentUser?.role === 'admin' && (
+        {currentUser?.role === 'ADMIN' && (
           <ReportManagement
             visible={showReportManagement}
             onClose={() => setShowReportManagement(false)}

@@ -1,11 +1,14 @@
 import React from 'react';
-import { TextInput, TextInputProps, StyleSheet, TextStyle } from 'react-native';
+import { View, Text, TextInput, TextInputProps, StyleSheet, TextStyle, ViewStyle } from 'react-native';
 
 interface InputProps extends TextInputProps {
   variant?: 'default' | 'outline';
+  label?: string;
+  containerStyle?: ViewStyle | ViewStyle[];
+  labelStyle?: TextStyle | TextStyle[];
 }
 
-export function Input({ variant = 'default', style, ...props }: InputProps) {
+export function Input({ variant = 'default', style, label, containerStyle, labelStyle, ...props }: InputProps) {
   const getInputStyle = (): TextStyle[] => {
     const baseStyle: TextStyle[] = [styles.input];
     
@@ -22,15 +25,26 @@ export function Input({ variant = 'default', style, ...props }: InputProps) {
   };
 
   return (
-    <TextInput
-      style={[getInputStyle(), style]}
-      placeholderTextColor="#6b7280"
-      {...props}
-    />
+    <View style={[styles.container, containerStyle]}>
+      {label ? <Text style={[styles.label, labelStyle]}>{label}</Text> : null}
+      <TextInput
+        style={[getInputStyle(), style]}
+        placeholderTextColor="#6b7280"
+        {...props}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    marginBottom: 12,
+  },
+  label: {
+    marginBottom: 6,
+    fontSize: 14,
+    color: '#111827'
+  },
   input: {
     minHeight: 44,
     paddingHorizontal: 16,

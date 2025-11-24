@@ -23,6 +23,7 @@ interface DecodedToken {
   realm_access: {
     roles: string[];
   };
+  app_role?: string; // Attribut personnalisé si utilisé
 }
 
 interface AuthContextType {
@@ -66,8 +67,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Décoder le token pour obtenir les infos de l'utilisateur
         const decoded = jwtDecode<DecodedToken>(accessToken);
         
-        // Mapper les rôles de Keycloak à votre type 'role'
-        const role = decoded.realm_access.roles.includes('admin') ? 'admin' : 'user';
+              // --- MODIFICATION : AJOUT DE LOGS POUR DÉBUGGER ---
+        console.log("Token décodé complet:", JSON.stringify(decoded, null, 2));
+        console.log("Rôles trouvés:", decoded.realm_access?.roles);
+        console.log("Attributs personnalisés (si présents):", (decoded as any).app_role);
+        // --- CORRECTION : Vérification insensible à la casse et sécurisée ---
+        // 1. Récupérer la liste des rôles (tableau vide par défaut si inexistant)
+        const roles = decoded.realm_access?.roles || [];
+        
+        // 2. Vérifier si 'admin' ou 'ADMIN' est présent
+        const isAdmin = roles.some(r => r.toUpperCase() === 'ADMIN');
+
+        // 3. (Optionnel) Si vous utilisez l'attribut 'app_role' au lieu des rôles de royaume
+        const isAdminAttr = (decoded as any).app_role === 'ADMIN';
+        
+        const role = isAdminAttr ? 'ADMIN' : 'USER';
+        
+        console.log("Rôle final attribué dans l'app:", role);
         
         // Créer l'objet User tel que défini dans vos types
         const appUser: User = {

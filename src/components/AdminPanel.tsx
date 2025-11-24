@@ -1,425 +1,254 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ScrollView } from 'react-native';
+import { Event, EventCategory } from '../types';
+import { AdminService } from '../services/AdminService';
+import { EventService } from '../services/EventService';
+import { CreateEventModal } from './CreateEventModal';
+import { EditEventModal } from './EditEventModal';
+import { CategoryModal } from './CategoryModal'; // Import du nouveau modal
 import { Ionicons } from '@expo/vector-icons';
-import { Ticket, Event } from '../types';
-import { Card, CardContent, CardHeader } from './ui/Card';
-import { Button } from './ui/Button';
 
-interface AdminPanelProps {
-  tickets: Ticket[];
-  events: Event[];
-  onUpdateTicket: (ticketId: string, status: 'available' | 'sold' | 'pending') => void;
-}
+export function AdminPanel() {
+  // AJOUT de 'categories' dans le type de l'onglet
+  const [activeTab, setActiveTab] = useState<'events' | 'tickets' | 'users' | 'categories'>('events');
+  const [data, setData] = useState<any[]>([]);
+  
+  // États pour les modals d'événements
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
-export function AdminPanel({ tickets, events, onUpdateTicket }: AdminPanelProps) {
-  const getEventById = (eventId: string) => events.find(e => e.id === eventId);
+  // AJOUT : États pour les catégories
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<EventCategory | null>(null);
 
-  const formatPrice = (price: number) => `${price}€`;
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available':
-        return '#059669';
-      case 'sold':
-        return '#6b7280';
-      case 'pending':
-        return '#d97706';
-      default:
-        return '#6b7280';
+  const loadData = async () => {
+    try {
+      if (activeTab === 'events') {
+        const events = await EventService.getAllEvents();
+        setData(events);
+      } else if (activeTab === 'categories') {
+        // AJOUT : Chargement des catégories
+        const categories = await EventService.getCategories();
+        // On filtre la fausse catégorie "Toutes" (id: 'all') si elle est ajoutée par le front
+        setData(categories.filter(c => c.categoryId !== 'all'));
+      } else if (activeTab === 'users') {
+        // const users = await AdminService.getAllUsers();
+        setData([{ id: '1', name: 'Admin Test', email: 'admin@test.com', role: 'ADMIN' }]);
+      } else {
+        setData([]);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'available':
-        return 'Disponible';
-      case 'sold':
-        return 'Vendu';
-      case 'pending':
-        return 'En attente';
-      default:
-        return status;
-    }
+  useEffect(() => {
+    loadData();
+  }, [activeTab]);
+
+  // --- LOGIQUE EVENEMENTS ---
+  const handleDeleteEvent = (id: string) => {
+    Alert.alert("Supprimer l'événement", "Êtes-vous sûr ?", [
+        { text: "Annuler", style: "cancel" },
+        { text: "Supprimer", style: "destructive", onPress: async () => {
+            await AdminService.deleteEvent(id); loadData();
+        }}
+    ]);
   };
 
-  const handleStatusChange = (ticket: Ticket, newStatus: 'available' | 'sold' | 'pending') => {
+  const handleEditEvent = (event: Event) => {
+    setSelectedEvent(event);
+    setShowEditModal(true);
+  };
+
+  // --- AJOUT : LOGIQUE CATEGORIES ---
+  const handleEditCategory = (category: EventCategory) => {
+    setSelectedCategory(category);
+    setShowCategoryModal(true);
+  };
+
+  const handleDeleteCategory = (id: string) => {
     Alert.alert(
-      'Modifier le statut',
-      `Changer le statut du billet vers "${getStatusText(newStatus)}" ?`,
+      "Supprimer la catégorie",
+      "Attention : Cela pourrait affecter les événements liés. Êtes-vous sûr ?",
       [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Confirmer', 
-          onPress: () => onUpdateTicket(ticket.id, newStatus)
-        }
+        { text: "Annuler", style: "cancel" },
+        { text: "Supprimer", style: "destructive", onPress: async () => {
+            try {
+              await AdminService.deleteCategory(id);
+              loadData();
+            } catch (e) {
+              Alert.alert("Erreur", "Impossible de supprimer cette catégorie (peut-être utilisée ?)");
+            }
+        }}
       ]
     );
   };
 
-  const totalTickets = tickets.length;
-  const availableTickets = tickets.filter(t => t.status === 'available').length;
-  const soldTickets = tickets.filter(t => t.status === 'sold').length;
-  const pendingTickets = tickets.filter(t => t.status === 'pending').length;
-  const totalRevenue = tickets.filter(t => t.status === 'sold').reduce((sum, t) => sum + t.price, 0);
+  const openCreateCategory = () => {
+    setSelectedCategory(null); // Null = Mode Création
+    setShowCategoryModal(true);
+  };
+
+  const renderItem = ({ item }: { item: any }) => {
+    // Rendu Événements
+    if (activeTab === 'events') {
+      return (
+        <View style={styles.row}>
+          <View style={{flex: 1}}>
+            <Text style={styles.rowTitle}>{item.name}</Text>
+            <Text style={styles.rowSubtitle}>{item.location} • {item.categoryLabel}</Text>
+            <Text style={styles.rowStatus}>{item.status}</Text>
+          </View>
+          <View style={styles.actions}>
+            <TouchableOpacity onPress={() => handleEditEvent(item)} style={styles.actionButton}>
+              <Ionicons name="pencil" size={20} color="#2563eb" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDeleteEvent(item.id)} style={styles.actionButton}>
+              <Ionicons name="trash" size={20} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+    
+    // AJOUT : Rendu Catégories
+if (activeTab === 'categories') {
+      // Sécurisation de l'ID : si undefined, chaîne vide
+      const catId = item.categoryId || ''; 
+      return (
+        <View style={styles.row}>
+          <View style={{flex: 1}}>
+            <Text style={styles.rowTitle}>{item.label}</Text>
+            {/* CORRECTION : Utilisation sécurisée de substring */}
+            <Text style={styles.rowSubtitle}>ID: {catId.length > 8 ? catId.substring(0, 8) + '...' : catId}</Text>
+          </View>
+          <View style={styles.actions}>
+            <TouchableOpacity onPress={() => handleEditCategory(item)} style={styles.actionButton}><Ionicons name="pencil" size={20} color="#2563eb" /></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDeleteCategory(item.categoryId)} style={styles.actionButton}><Ionicons name="trash" size={20} color="#ef4444" /></TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    // Rendu Users (Mock)
+    if (activeTab === 'users') {
+      return (
+        <View style={styles.row}>
+          <Text style={styles.rowTitle}>{item.name}</Text>
+          <Text style={styles.rowSubtitle}>{item.email} ({item.role})</Text>
+        </View>
+      );
+    }
+    return null;
+  };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Panneau d'administration</Text>
-          <Text style={styles.subtitle}>Gérez tous les billets sur la plateforme</Text>
-        </View>
-
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          <Card style={styles.statCard}>
-            <CardContent style={styles.statContent}>
-              <View style={styles.statIcon}>
-                <Ionicons name="ticket" size={24} color="#2563eb" />
-              </View>
-              <Text style={styles.statNumber}>{totalTickets}</Text>
-              <Text style={styles.statLabel}>Total billets</Text>
-            </CardContent>
-          </Card>
-
-          <Card style={styles.statCard}>
-            <CardContent style={styles.statContent}>
-              <View style={[styles.statIcon, { backgroundColor: '#dcfce7' }]}>
-                <Ionicons name="checkmark-circle" size={24} color="#059669" />
-              </View>
-              <Text style={styles.statNumber}>{availableTickets}</Text>
-              <Text style={styles.statLabel}>Disponibles</Text>
-            </CardContent>
-          </Card>
-
-          <Card style={styles.statCard}>
-            <CardContent style={styles.statContent}>
-              <View style={[styles.statIcon, { backgroundColor: '#f3f4f6' }]}>
-                <Ionicons name="checkmark-done" size={24} color="#6b7280" />
-              </View>
-              <Text style={styles.statNumber}>{soldTickets}</Text>
-              <Text style={styles.statLabel}>Vendus</Text>
-            </CardContent>
-          </Card>
-
-          <Card style={styles.statCard}>
-            <CardContent style={styles.statContent}>
-              <View style={[styles.statIcon, { backgroundColor: '#fef3c7' }]}>
-                <Ionicons name="time" size={24} color="#d97706" />
-              </View>
-              <Text style={styles.statNumber}>{pendingTickets}</Text>
-              <Text style={styles.statLabel}>En attente</Text>
-            </CardContent>
-          </Card>
-        </View>
-
-        {/* Revenue Card */}
-        <Card style={styles.revenueCard}>
-          <CardContent style={styles.revenueContent}>
-            <View style={styles.revenueIcon}>
-              <Ionicons name="trending-up" size={32} color="#059669" />
-            </View>
-            <View style={styles.revenueInfo}>
-              <Text style={styles.revenueAmount}>{formatPrice(totalRevenue)}</Text>
-              <Text style={styles.revenueLabel}>Chiffre d'affaires total</Text>
-            </View>
-          </CardContent>
-        </Card>
-
-        {/* Tickets Management */}
-        <Card style={styles.ticketsCard}>
-          <CardHeader>
-            <Text style={styles.ticketsTitle}>Gestion des billets</Text>
-          </CardHeader>
-          <CardContent>
-            {tickets.length > 0 ? (
-              <View style={styles.ticketsList}>
-                {tickets.map(ticket => {
-                  const event = getEventById(ticket.eventId);
-                  return (
-                    <View key={ticket.id} style={styles.ticketItem}>
-                      <View style={styles.ticketHeader}>
-                        <View style={styles.ticketMainInfo}>
-                          <Text style={styles.ticketEvent} numberOfLines={1}>
-                            {event?.title || 'Événement inconnu'}
-                          </Text>
-                          <Text style={styles.ticketDetails}>
-                            {ticket.section} - {ticket.row}{ticket.seat}
-                          </Text>
-                        </View>
-                        <View style={styles.ticketPriceInfo}>
-                          <Text style={styles.ticketPrice}>
-                            {formatPrice(ticket.price)}
-                          </Text>
-                          <View style={[
-                            styles.statusBadge,
-                            { backgroundColor: getStatusColor(ticket.status) + '20' }
-                          ]}>
-                            <Text style={[
-                              styles.statusText,
-                              { color: getStatusColor(ticket.status) }
-                            ]}>
-                              {getStatusText(ticket.status)}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      <View style={styles.ticketMeta}>
-                        <View style={styles.sellerInfo}>
-                          <Ionicons name="person-outline" size={14} color="#6b7280" />
-                          <Text style={styles.sellerName}>{ticket.sellerName}</Text>
-                        </View>
-                        {event && (
-                          <Text style={styles.eventDate}>
-                            {new Date(event.date).toLocaleDateString('fr-FR')}
-                          </Text>
-                        )}
-                      </View>
-
-                      {/* Action Buttons */}
-                      <View style={styles.actionButtons}>
-                        {ticket.status !== 'available' && (
-                          <Button
-                            title="Disponible"
-                            variant="outline"
-                            size="sm"
-                            onPress={() => handleStatusChange(ticket, 'available')}
-                            style={[styles.actionButton, styles.availableButton]}
-                          />
-                        )}
-                        {ticket.status !== 'pending' && (
-                          <Button
-                            title="En attente"
-                            variant="outline"
-                            size="sm"
-                            onPress={() => handleStatusChange(ticket, 'pending')}
-                            style={[styles.actionButton, styles.pendingButton]}
-                          />
-                        )}
-                        {ticket.status !== 'sold' && (
-                          <Button
-                            title="Vendu"
-                            variant="outline"
-                            size="sm"
-                            onPress={() => handleStatusChange(ticket, 'sold')}
-                            style={[styles.actionButton, styles.soldButton]}
-                          />
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="ticket-outline" size={48} color="#9ca3af" />
-                <Text style={styles.emptyTitle}>Aucun billet</Text>
-                <Text style={styles.emptyText}>
-                  Aucun billet n'est actuellement sur la plateforme
-                </Text>
-              </View>
-            )}
-          </CardContent>
-        </Card>
+    <View style={styles.container}>
+      <Text style={styles.headerTitle}>Administration</Text>
+      
+      {/* Tabs */}
+      <View>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={styles.tabsContainer}
+          style={styles.tabsScrollView}
+        >
+          {(['events', 'categories', 'tickets', 'users'] as const).map(tab => (
+            <TouchableOpacity 
+              key={tab} 
+              style={[styles.tab, activeTab === tab && styles.activeTab]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
-    </ScrollView>
+
+      {/* Boutons d'action contextuels */}
+      {activeTab === 'events' && (
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowCreateModal(true)}>
+          <Text style={styles.addButtonText}>+ Événement</Text>
+        </TouchableOpacity>
+      )}
+
+      {activeTab === 'categories' && (
+        <TouchableOpacity style={styles.addButton} onPress={openCreateCategory}>
+          <Text style={styles.addButtonText}>+ Catégorie</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Liste */}
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id || item.eventId || item.categoryId}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={<Text style={styles.emptyText}>Aucune donnée</Text>}
+      />
+
+      {/* Modals Événements */}
+      <CreateEventModal 
+        visible={showCreateModal} 
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={loadData}
+      />
+      <EditEventModal
+        visible={showEditModal}
+        event={selectedEvent}
+        onClose={() => { setShowEditModal(false); setSelectedEvent(null); }}
+        onSuccess={loadData}
+      />
+
+      {/* AJOUT : Modal Catégorie */}
+      <CategoryModal 
+        visible={showCategoryModal}
+        categoryToEdit={selectedCategory}
+        onClose={() => { setShowCategoryModal(false); setSelectedCategory(null); }}
+        onSuccess={loadData}
+      />
+    </View>
   );
 }
 
+// Styles inchangés (ou ajustés légèrement pour 4 onglets)
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
+  container: { flex: 1, padding: 16, backgroundColor: '#f9fafb' },
+  headerTitle: { fontSize: 28, fontWeight: 'bold', marginBottom: 16, color: '#111827' },
+  
+  // Styles modifiés pour le scroll horizontal des onglets
+  tabsScrollView: { marginBottom: 16, maxHeight: 50 },
+  tabsContainer: { 
+    backgroundColor: '#e5e7eb', 
+    borderRadius: 8, 
+    padding: 4, 
+    height: 44, // Hauteur fixe pour éviter l'écrasement
+    alignItems: 'center'
   },
-  content: {
-    padding: 16,
-    gap: 20,
+  tab: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 6, 
+    borderRadius: 6, 
+    marginRight: 4,
+    justifyContent: 'center'
   },
-  header: {
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: 150,
-  },
-  statContent: {
-    alignItems: 'center',
-    padding: 16,
-    gap: 8,
-  },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#dbeafe',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  revenueCard: {
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-  },
-  revenueContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    gap: 16,
-  },
-  revenueIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#dcfce7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  revenueInfo: {
-    flex: 1,
-  },
-  revenueAmount: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#059669',
-    marginBottom: 4,
-  },
-  revenueLabel: {
-    fontSize: 16,
-    color: '#065f46',
-  },
-  ticketsCard: {},
-  ticketsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  ticketsList: {
-    gap: 16,
-  },
-  ticketItem: {
-    padding: 16,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  ticketHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  ticketMainInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  ticketEvent: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  ticketDetails: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  ticketPriceInfo: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  ticketPrice: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#059669',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  ticketMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sellerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  sellerName: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  eventDate: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  actionButton: {
-    flex: 0,
-    minWidth: 80,
-  },
-  availableButton: {
-    borderColor: '#059669',
-  },
-  pendingButton: {
-    borderColor: '#d97706',
-  },
-  soldButton: {
-    borderColor: '#6b7280',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
+  activeTab: { backgroundColor: 'white', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 },
+  tabText: { fontWeight: '600', color: '#6b7280', fontSize: 14 },
+  activeTabText: { color: '#111827' },
+
+  addButton: { backgroundColor: '#2563eb', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 16 },
+  addButtonText: { color: 'white', fontWeight: 'bold' },
+  list: { paddingBottom: 20 },
+  row: { flexDirection: 'row', padding: 16, backgroundColor: 'white', marginBottom: 8, borderRadius: 8, alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  rowTitle: { fontWeight: 'bold', fontSize: 16, color: '#1f2937' },
+  rowSubtitle: { color: '#6b7280', marginTop: 2 },
+  rowStatus: { fontSize: 12, color: '#9ca3af', marginTop: 4, textTransform: 'uppercase' },
+  actions: { flexDirection: 'row', gap: 10 },
+  actionButton: { padding: 8 },
+  emptyText: { textAlign: 'center', color: '#9ca3af', marginTop: 20 }
 });
