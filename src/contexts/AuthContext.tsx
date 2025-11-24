@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const decoded = jwtDecode<DecodedToken>(accessToken);
         
         // Mapper les rôles de Keycloak à votre type 'role'
-        const role = decoded.realm_access.roles.includes('admin') ? 'admin' : 'user';
+        const role = decoded.realm_access.roles.includes('ADMIN') ? 'ADMIN' : 'USER';
         
         // Créer l'objet User tel que défini dans vos types
         const appUser: User = {
