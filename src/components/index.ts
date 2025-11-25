@@ -18,3 +18,4 @@ export { EventCard } from './EventCard';
 export { CreateEventModal } from './CreateEventModal';
 export { EditEventModal } from './EditEventModal';
 export { CategoryModal } from './CategoryModal';
+export { UserModal } from './UserModal';

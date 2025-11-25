@@ -7,7 +7,8 @@ import { CreateEventModal } from './CreateEventModal';
 import { EditEventModal } from './EditEventModal';
 import { CategoryModal } from './CategoryModal'; // Import du nouveau modal
 import { Ionicons } from '@expo/vector-icons';
-
+import { User } from '../types'; // Import du type User
+import { UserModal } from './UserModal';
 export function AdminPanel() {
   // AJOUT de 'categories' dans le type de l'onglet
   const [activeTab, setActiveTab] = useState<'events' | 'tickets' | 'users' | 'categories'>('events');
@@ -22,6 +23,9 @@ export function AdminPanel() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<EventCategory | null>(null);
 
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
   const loadData = async () => {
     try {
       if (activeTab === 'events') {
@@ -33,8 +37,8 @@ export function AdminPanel() {
         // On filtre la fausse catégorie "Toutes" (id: 'all') si elle est ajoutée par le front
         setData(categories.filter(c => c.categoryId !== 'all'));
       } else if (activeTab === 'users') {
-        // const users = await AdminService.getAllUsers();
-        setData([{ id: '1', name: 'Admin Test', email: 'admin@test.com', role: 'ADMIN' }]);
+        const users = await AdminService.getAllUsers();
+        setData(users);
       } else {
         setData([]);
       }
@@ -47,6 +51,62 @@ export function AdminPanel() {
     loadData();
   }, [activeTab]);
 
+
+  // --- AJOUT : HANDLERS UTILISATEURS ---
+  const openCreateUser = () => {
+  setSelectedUser(null);
+  setShowUserModal(true);
+};
+
+const handleEditUser = (user: any) => { // 'any' ou 'User' selon votre typage strict
+  setSelectedUser(user);
+  setShowUserModal(true);
+};
+  
+  const handleSuspendUser = (user: User) => {
+    Alert.alert(
+      "Suspendre l'utilisateur",
+      `Voulez-vous suspendre le compte de ${user.name} ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { 
+          text: "Suspendre", 
+          style: "default", // ou "destructive" selon préférence
+          onPress: async () => {
+            try {
+              await AdminService.suspendUser(user.id);
+              Alert.alert("Succès", "Utilisateur suspendu");
+              loadData(); // Rafraîchir la liste
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible de suspendre l'utilisateur");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteUser = (user: User) => {
+    Alert.alert(
+      "Supprimer l'utilisateur",
+      `Attention : Cette action est irréversible.\nSupprimer ${user.name} ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { 
+          text: "Supprimer définitivement", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await AdminService.deleteUser(user.id);
+              loadData();
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible de supprimer l'utilisateur");
+            }
+          }
+        }
+      ]
+    );
+  };
   // --- LOGIQUE EVENEMENTS ---
   const handleDeleteEvent = (id: string) => {
     Alert.alert("Supprimer l'événement", "Êtes-vous sûr ?", [
@@ -136,8 +196,40 @@ if (activeTab === 'categories') {
     if (activeTab === 'users') {
       return (
         <View style={styles.row}>
-          <Text style={styles.rowTitle}>{item.name}</Text>
-          <Text style={styles.rowSubtitle}>{item.email} ({item.role})</Text>
+          <View style={{flex: 1}}>
+            <Text style={styles.rowTitle}>{item.name}</Text>
+            <Text style={styles.rowSubtitle}>{item.email}</Text>
+            <View style={{ flexDirection: 'row', marginTop: 4 }}>
+              {/* Badge Rôle */}
+              <View style={[
+                styles.badge, 
+                item.role === 'ADMIN' ? { backgroundColor: '#fee2e2' } : { backgroundColor: '#dbeafe' }
+              ]}>
+                <Text style={[
+                  styles.badgeText,
+                  item.role === 'ADMIN' ? { color: '#dc2626' } : { color: '#2563eb' }
+                ]}>
+                  {item.role}
+                </Text>
+              </View>
+            </View>
+          </View>
+          
+          <View style={styles.actions}>
+
+            <TouchableOpacity onPress={() => handleEditUser(item)} style={styles.actionButton}>
+              <Ionicons name="pencil" size={20} color="#2563eb" />
+            </TouchableOpacity>
+            {/* Bouton Suspendre */}
+            <TouchableOpacity onPress={() => handleSuspendUser(item)} style={styles.actionButton}>
+              <Ionicons name="ban-outline" size={20} color="#f59e0b" />
+            </TouchableOpacity>
+            
+            {/* Bouton Supprimer */}
+            <TouchableOpacity onPress={() => handleDeleteUser(item)} style={styles.actionButton}>
+              <Ionicons name="trash" size={20} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -183,6 +275,12 @@ if (activeTab === 'categories') {
         </TouchableOpacity>
       )}
 
+      {activeTab === 'users' && (
+        <TouchableOpacity style={styles.addButton} onPress={openCreateUser}>
+          <Text style={styles.addButtonText}>+ Utilisateur</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Liste */}
       <FlatList
         data={data}
@@ -212,6 +310,13 @@ if (activeTab === 'categories') {
         onClose={() => { setShowCategoryModal(false); setSelectedCategory(null); }}
         onSuccess={loadData}
       />
+
+      <UserModal 
+        visible={showUserModal}
+        userToEdit={selectedUser}
+        onClose={() => { setShowUserModal(false); setSelectedUser(null); }}
+        onSuccess={loadData}
+    />
     </View>
   );
 }
@@ -237,6 +342,16 @@ const styles = StyleSheet.create({
     marginRight: 4,
     justifyContent: 'center'
   },
+  badge: {
+  paddingHorizontal: 8,
+  paddingVertical: 2,
+  borderRadius: 12,
+  alignSelf: 'flex-start',
+},
+badgeText: {
+  fontSize: 10,
+  fontWeight: 'bold',
+},
   activeTab: { backgroundColor: 'white', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 },
   tabText: { fontWeight: '600', color: '#6b7280', fontSize: 14 },
   activeTabText: { color: '#111827' },

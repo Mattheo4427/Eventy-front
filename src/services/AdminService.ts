@@ -66,12 +66,6 @@ export const AdminService = {
     return response.data;
   },
 
-  // --- Gestion Utilisateurs ---
-  getAllUsers: async (): Promise<User[]> => {
-    // Backend: GET /api/users
-    const response = await api.get<User[]>('/users');
-    return response.data;
-  },
   createCategory: async (label: string): Promise<EventCategory> => {
     // POST /api/event-categories
     const response = await api.post<EventCategory>('/event-categories', { label });
@@ -87,5 +81,52 @@ export const AdminService = {
   deleteCategory: async (id: string): Promise<void> => {
     // DELETE /api/event-categories/{id}
     await api.delete(`/event-categories/${id}`);
+  },
+  /**
+   * Récupère la liste de tous les utilisateurs (Admin only)
+   */
+  getAllUsers: async (): Promise<User[]> => {
+    // Appel vers Users Service via Gateway
+    // Endpoint Backend: GET /users/admin/users
+    const response = await api.get<User[]>('/users/admin/users');
+    return response.data;
+  },
+
+  /**
+   * Suspend un utilisateur
+   */
+  suspendUser: async (userId: string): Promise<void> => {
+    // Endpoint Backend: POST /users/admin/users/{id}/suspend
+    await api.post(`/users/admin/users/${userId}/suspend`);
+  },
+
+  /**
+   * Crée un nouvel utilisateur (Admin ou Standard)
+   */
+  createUser: async (userData: any): Promise<void> => {
+    // Si on crée un admin, on utilise l'endpoint sécurisé
+    if (userData.role === 'ADMIN') {
+      await api.post('/users/admin/users/create-admin', userData);
+    } else {
+      // Sinon création standard
+      await api.post('/users', userData);
+    }
+  },
+
+  /**
+   * Met à jour un utilisateur (Requiert implémentation backend PUT /users/admin/users/{id})
+   */
+  updateUser: async (id: string, userData: any): Promise<void> => {
+    // TODO: Implémenter l'endpoint côté backend. 
+    // Pour l'instant, cet appel échouera probablement (404 ou 405)
+    await api.put(`/users/admin/users/${id}`, userData);
+  },
+
+  /**
+   * Supprime un utilisateur définitivement
+   */
+  deleteUser: async (userId: string): Promise<void> => {
+    // Endpoint Backend: DELETE /users/admin/users/{id}
+    await api.delete(`/users/admin/users/${userId}`);
   }
 };
