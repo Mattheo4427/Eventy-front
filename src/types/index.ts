@@ -54,13 +54,26 @@ export interface Ticket {
 }
 
 export interface Transaction {
-  id: string;
-  ticketId: string;
-  buyerId: string;
-  sellerId: string;
-  price: number;
-  date: string;
-  status: 'completed' | 'pending' | 'cancelled';
+  id: string;             // UUID backend
+  buyerId: string;        // UUID backend
+  ticketId: string;       // UUID backend
+  
+  // Montants
+  totalAmount: number;
+  platformFee: number;
+  vendorAmount: number;
+
+  // Méthodes & Statuts (Alignés avec les Enums Java)
+  paymentMethod: 'CREDIT_CARD' | 'PAYPAL' | 'APPLE_PAY' | 'GOOGLE_PAY';
+  paymentStatus: 'UNPAID' | 'PAID' | 'REFUNDED';
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELED' | 'REFUNDED';
+  
+  paymentToken?: string;
+  refundAddress?: string;
+
+  // Dates
+  transactionDate: string; // ISO String
+  validationDate?: string; // ISO String
 }
 
 export interface Notification {
