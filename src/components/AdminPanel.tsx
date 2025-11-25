@@ -198,7 +198,7 @@ export function AdminPanel() {
           <View style={styles.ticketDetailItem}><Text style={styles.detailLabel}>Section</Text><Text style={styles.detailValue}>{ticket.section || '-'}</Text></View>
           <View style={styles.ticketDetailItem}><Text style={styles.detailLabel}>Rang</Text><Text style={styles.detailValue}>{ticket.row || '-'}</Text></View>
           <View style={styles.ticketDetailItem}><Text style={styles.detailLabel}>Siège</Text><Text style={styles.detailValue}>{ticket.seat || '-'}</Text></View>
-          <View style={styles.ticketDetailItem}><Text style={styles.detailLabel}>Prix</Text><Text style={styles.priceValue}>{ticket.salePrice || ticket.price} €</Text></View>
+          <View style={styles.ticketDetailItem}><Text style={styles.detailLabel}>Prix</Text><Text style={styles.priceValue}>{ticket.salePrice || ticket.salePrice} €</Text></View>
         </View>
         <View style={styles.ticketFooter}>
           <View style={styles.sellerInfo}>

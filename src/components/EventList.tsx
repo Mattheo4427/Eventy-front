@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TextInput, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
-import { useTranslation } from 'react-i18next'; // Import du hook de traduction
+import { useTranslation } from 'react-i18next';
 import { Event, EventCategory } from '../types';
 import { EventService } from '../services/EventService';
 import { EventCard } from './EventCard';
-import { Input } from './ui/Input'; // Assurez-vous d'utiliser votre composant Input personnalisé si disponible
+import { Input } from './ui/Input';
 
 interface EventListProps {
   onViewEvent: (eventId: string) => void;
-  onSellTicket?: () => void; // Prop optionnelle pour le bouton "Vendre"
+  onSellTicket?: () => void;
 }
 
 export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
@@ -21,12 +21,12 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Hook de traduction
   const { t } = useTranslation(); 
 
   const loadData = async () => {
     try {
       const cats = await EventService.getCategories();
+      // Filtre pour éviter le doublon 'all' si le back le renvoie aussi
       setCategories(cats.filter(c => c.categoryId !== 'all'));      
       await fetchEvents();
     } catch (e) {
@@ -39,17 +39,25 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
 
   const fetchEvents = async () => {
     try {
-      const data = await EventService.getAllEvents(searchTerm, 'all', selectedCategory === 'all' ? undefined : selectedCategory);
+      // Appel au service avec les filtres
+      // Note: on passe 'undefined' pour categoryId si c'est 'all' pour que le backend ignore ce filtre
+      const data = await EventService.getAllEvents(
+        searchTerm, 
+        'all', 
+        selectedCategory === 'all' ? undefined : selectedCategory
+      );
       setEvents(data);
     } catch (error) {
       console.error("Failed to fetch events", error);
     }
   };
 
+  // Chargement initial
   useEffect(() => {
     loadData();
   }, []);
 
+  // Rechargement lors du changement des filtres (avec debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchEvents();
@@ -63,19 +71,14 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
   };
 
   const getCategoryLabel = (label: string) => {
-    // Tente de traduire 'events.categories.Nom', sinon affiche le Nom
     return t(`categories.${label}`, { ns: 'events', defaultValue: label });
   };
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
-      {/* Titre traduit : 'availableEvents' */}
       <Text style={styles.pageTitle}>{t('availableEvents', { ns: 'events', defaultValue: 'Événements disponibles' })}</Text>
-      
-      {/* Sous-titre traduit : 'findTickets' */}
       <Text style={styles.subtitle}>{t('findTickets', { ns: 'events', defaultValue: 'Trouvez les billets pour vos événements préférés' })}</Text>
 
-      {/* Barre de recherche traduite : 'searchPlaceholder' */}
       <TextInput
         style={styles.searchInput}
         placeholder={t('searchPlaceholder', { ns: 'events', defaultValue: 'Rechercher un événement...' })}
@@ -83,22 +86,21 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
         onChangeText={setSearchTerm}
       />
 
-      {/* Filtres Catégories */}
       <View style={styles.filterLabelContainer}>
          <Text style={styles.filterLabel}>{t('category', { ns: 'events', defaultValue: 'Catégorie' })}:</Text>
       </View>
 
       <FlatList
         horizontal
+        showsHorizontalScrollIndicator={false}
+        // Construction de la liste des catégories avec l'option "Toutes" en premier
         data={[
-          { categoryId: 'all', label: 'all' }, // On met une clé de traduction ou un mot clé
+          { categoryId: 'all', label: 'all' }, 
           ...categories
         ]}
-        showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.categoryId}
         contentContainerStyle={styles.categoriesList}
         renderItem={({ item }) => {
-          // CORRECTION 3 : Traduction de l'affichage
           const label = item.categoryId === 'all' 
             ? t('all', { ns: 'events', defaultValue: 'Toutes' }) 
             : getCategoryLabel(item.label);
@@ -139,6 +141,7 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         renderItem={({ item }) => (
+          // Passage de la prop onViewEvent pour gérer la navigation
           <EventCard 
             event={item} 
             onViewEvent={onViewEvent}
@@ -146,7 +149,6 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            {/* Message vide traduit : 'noEventsFound' et 'modifySearchCriteria' */}
             <Text style={styles.emptyText}>{t('noEventsFound', { ns: 'events', defaultValue: 'Aucun événement trouvé' })}</Text>
             <Text style={styles.emptySubtext}>{t('modifySearchCriteria', { ns: 'events', defaultValue: 'Essayez de modifier vos critères de recherche' })}</Text>
           </View>
