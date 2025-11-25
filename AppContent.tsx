@@ -144,10 +144,14 @@ export default function AppContent() {
       id: `trans_${Date.now()}`,
       ticketId,
       buyerId: currentUser.id,
-      sellerId: ticket.sellerId,
-      price: ticket.price,
-      date: new Date().toISOString(),
-      status: 'completed'
+      //sellerId: ticket.sellerId,
+      totalAmount: ticket.price,
+      platformFee: 0, // À ajuster selon la logique métier
+      vendorAmount: ticket.price, // À ajuster selon la logique métier
+      transactionDate: new Date().toISOString(),
+      status: 'COMPLETED',
+      paymentMethod: 'CREDIT_CARD',
+      paymentStatus: 'PAID'
     };
     
     setTransactions(prev => [...prev, transaction]);

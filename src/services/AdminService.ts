@@ -128,5 +128,12 @@ export const AdminService = {
   deleteUser: async (userId: string): Promise<void> => {
     // Endpoint Backend: DELETE /users/admin/users/{id}
     await api.delete(`/users/admin/users/${userId}`);
+  },
+
+  getAllTransactions: async (): Promise<any[]> => {
+    // Appel vers Transactions Service via Gateway
+    // Endpoint Backend: GET /transactions/admin/all
+    const response = await api.get<any[]>('/transactions/admin/all');
+    return response.data;
   }
 };
