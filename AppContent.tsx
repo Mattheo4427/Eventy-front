@@ -362,7 +362,7 @@ export default function AppContent() {
       case 'home':
         return (
           <HomeScreen
-            events={events}
+            // events={events}
             onViewEvent={handleViewEvent}
             onNavigateToEvents={() => setCurrentView('events')}
           />
