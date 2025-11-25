@@ -381,16 +381,16 @@ export default function AppContent() {
             */
           />
         );
-      case 'event-detail':
-        if (!selectedEvent) return null;
+    case 'event-detail':
+        // Plus besoin de vérifier selectedEvent ici
+        if (!selectedEventId) return null; 
+        
         return (
           <EventDetail 
-            event={selectedEvent}
-            // Filtrer les tickets compatibles avec le nouveau modèle
-            tickets={tickets.filter(t => t.eventId === selectedEvent.id && t.status === 'available')}
+            eventId={selectedEventId} // On passe juste l'ID
             onBuyTicket={handleBuyTicket}
             onBack={() => setCurrentView('events')}
-            // ... autres props
+            // Retirer tickets={...} car EventDetail les charge lui-même
           />
         );
       case 'profile':

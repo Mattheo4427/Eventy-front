@@ -1,30 +1,72 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Event, Ticket } from '../types';
 import { Button } from './ui/Button';
 import { useTranslation } from 'react-i18next';
+import { EventService } from '../services/EventService';
 
 interface EventDetailProps {
-  event: Event;
-  tickets: Ticket[];
+  eventId: string; // On passe l'ID au lieu de l'objet complet
   onBuyTicket: (ticket: Ticket) => void;
   onBack: () => void;
 }
 
-export function EventDetail({ event, tickets, onBuyTicket, onBack }: EventDetailProps) {
+export function EventDetail({ eventId, onBuyTicket, onBack }: EventDetailProps) {
   const { t } = useTranslation();
+  
+  const [event, setEvent] = useState<Event | null>(null);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [eventData, ticketsData] = await Promise.all([
+          EventService.getEventById(eventId),
+          EventService.getEventTickets(eventId)
+        ]);
+        setEvent(eventData);
+        setTickets(ticketsData);
+      } catch (error) {
+        console.error("Erreur chargement détail:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (eventId) {
+      loadData();
+    }
+  }, [eventId]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+  if (!event) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <Text>Événement introuvable</Text>
+        <Button title="Retour" onPress={onBack} style={{marginTop: 20}} />
+      </View>
+    );
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
+
+  // Filtrer uniquement les billets disponibles
+  const availableTickets = tickets.filter(t => t.status === 'AVAILABLE');
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -32,11 +74,11 @@ export function EventDetail({ event, tickets, onBuyTicket, onBack }: EventDetail
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#374151" />
-          <Text style={styles.backText}>{t('eventDetail.back')}</Text>
+          <Text style={styles.backText}>{t('eventDetail.back', { defaultValue: 'Retour' })}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Image de l'événement */}
+      {/* Image */}
       <Image 
         source={{ uri: event.imageUrl || 'https://via.placeholder.com/800x400' }} 
         style={styles.coverImage}
@@ -44,7 +86,6 @@ export function EventDetail({ event, tickets, onBuyTicket, onBack }: EventDetail
       />
 
       <View style={styles.content}>
-        {/* Informations principales */}
         <View style={styles.titleSection}>
           <Text style={styles.title}>{event.name}</Text>
           <View style={styles.badgesContainer}>
@@ -53,35 +94,24 @@ export function EventDetail({ event, tickets, onBuyTicket, onBack }: EventDetail
                 <Text style={styles.categoryText}>{event.categoryLabel}</Text>
               </View>
             )}
-            {event.status !== 'active' && (
-              <View style={[styles.statusBadge, event.status === 'canceled' ? styles.bgRed : styles.bgOrange]}>
-                <Text style={styles.statusText}>{event.status}</Text>
-              </View>
-            )}
           </View>
         </View>
 
-        {/* Date et Lieu */}
+        {/* Infos */}
         <View style={styles.infoSection}>
           <View style={styles.infoRow}>
             <Ionicons name="calendar" size={20} color="#4b5563" />
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoLabel}>Date</Text>
               <Text style={styles.infoValue}>{formatDate(event.startDate)}</Text>
-              {event.endDate && (
-                <Text style={styles.infoSubValue}>au {formatDate(event.endDate)}</Text>
-              )}
             </View>
           </View>
-
           <View style={styles.infoRow}>
             <Ionicons name="location" size={20} color="#4b5563" />
             <View style={styles.infoTextContainer}>
-              <Text style={styles.infoLabel}>{t('events.location')}</Text>
+              <Text style={styles.infoLabel}>Lieu</Text>
               <Text style={styles.infoValue}>{event.location}</Text>
-              {event.fullAddress && (
-                <Text style={styles.infoSubValue}>{event.fullAddress}</Text>
-              )}
+              {event.fullAddress && <Text style={styles.infoSubValue}>{event.fullAddress}</Text>}
             </View>
           </View>
         </View>
@@ -92,40 +122,29 @@ export function EventDetail({ event, tickets, onBuyTicket, onBack }: EventDetail
           <Text style={styles.description}>{event.description}</Text>
         </View>
 
-        {/* Liste des billets */}
+        {/* Billets */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('events.availableEvents')}</Text> {/* "Billets disponibles" serait mieux */}
+          <Text style={styles.sectionTitle}>
+             Billets disponibles ({availableTickets.length})
+          </Text>
           
-          {tickets.length > 0 ? (
-            tickets.map(ticket => (
+          {availableTickets.length > 0 ? (
+            availableTickets.map(ticket => (
               <View key={ticket.id} style={styles.ticketCard}>
                 <View style={styles.ticketInfo}>
                   <View style={styles.ticketHeader}>
-                    <Text style={styles.ticketSection}>
-                      Section {ticket.section}, Rang {ticket.row}
-                    </Text>
-                    <View style={styles.priceContainer}>
-                      <Text style={styles.price}>{ticket.salePrice}€</Text>
-                      {ticket.originalPrice > ticket.salePrice && (
-                        <Text style={styles.originalPrice}>{ticket.originalPrice}€</Text>
-                      )}
+                    <View>
+                        <Text style={styles.ticketType}>{ticket.ticketTypeLabel || 'Standard'}</Text>
+                        <Text style={styles.ticketLocation}>Section {ticket.section || '-'} • Rang {ticket.row || '-'}</Text>
                     </View>
+                    <Text style={styles.price}>{ticket.salePrice}€</Text>
                   </View>
-                  
-                  <View style={styles.ticketMeta}>
-                    <Text style={styles.seatText}>Siège: {ticket.seat}</Text>
-                    {ticket.originalPrice > ticket.salePrice && (
-                      <View style={styles.savingsBadge}>
-                        <Text style={styles.savingsText}>
-                          -{Math.round(((ticket.originalPrice - ticket.salePrice) / ticket.originalPrice) * 100)}%
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+                  {ticket.sellerName && (
+                      <Text style={styles.sellerText}>Vendeur: {ticket.sellerName}</Text>
+                  )}
                 </View>
-
                 <Button 
-                  title={t('eventDetail.buy')} 
+                  title="Acheter" 
                   onPress={() => onBuyTicket(ticket)}
                   variant="primary"
                 />
@@ -134,8 +153,7 @@ export function EventDetail({ event, tickets, onBuyTicket, onBack }: EventDetail
           ) : (
             <View style={styles.noTicketsContainer}>
               <Ionicons name="ticket-outline" size={48} color="#9ca3af" />
-              <Text style={styles.noTicketsTitle}>{t('eventDetail.noTicketsAvailable')}</Text>
-              <Text style={styles.noTicketsText}>{t('eventDetail.noTicketsDescription')}</Text>
+              <Text style={styles.noTicketsTitle}>Aucun billet disponible</Text>
             </View>
           )}
         </View>
@@ -145,195 +163,34 @@ export function EventDetail({ event, tickets, onBuyTicket, onBack }: EventDetail
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  header: {
-    paddingTop: 50, // SafeArea
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    backgroundColor: '#ffffff',
-    zIndex: 10,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    marginLeft: 4,
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  coverImage: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#f3f4f6',
-  },
-  content: {
-    padding: 20,
-  },
-  titleSection: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 10,
-  },
-  badgesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryBadge: {
-    backgroundColor: '#dbeafe',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  categoryText: {
-    color: '#2563eb',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  bgRed: { backgroundColor: '#fee2e2' },
-  bgOrange: { backgroundColor: '#ffedd5' },
-  statusText: {
-    color: '#374151',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  infoSection: {
-    backgroundColor: '#f9fafb',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  infoTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  infoSubValue: {
-    fontSize: 14,
-    color: '#4b5563',
-    marginTop: 2,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 16,
-    color: '#4b5563',
-    lineHeight: 24,
-  },
-  ticketCard: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  ticketInfo: {
-    marginBottom: 16,
-  },
-  ticketHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  ticketSection: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  priceContainer: {
-    alignItems: 'flex-end',
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#059669',
-  },
-  originalPrice: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textDecorationLine: 'line-through',
-  },
-  ticketMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  seatText: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  savingsBadge: {
-    backgroundColor: '#d1fae5',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  savingsText: {
-    color: '#059669',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  noTicketsContainer: {
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
-  },
-  noTicketsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  noTicketsText: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  center: { justifyContent: 'center', alignItems: 'center' },
+  header: { paddingTop: 50, paddingHorizontal: 16, paddingBottom: 10, backgroundColor: '#fff', zIndex: 10 },
+  backButton: { flexDirection: 'row', alignItems: 'center' },
+  backText: { marginLeft: 4, fontSize: 16, color: '#374151', fontWeight: '500' },
+  coverImage: { width: '100%', height: 200, backgroundColor: '#f3f4f6' },
+  content: { padding: 20 },
+  titleSection: { marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#111827', marginBottom: 10 },
+  badgesContainer: { flexDirection: 'row', gap: 8 },
+  categoryBadge: { backgroundColor: '#dbeafe', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  categoryText: { color: '#2563eb', fontWeight: '600', fontSize: 14 },
+  infoSection: { backgroundColor: '#f9fafb', padding: 16, borderRadius: 12, marginBottom: 24 },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
+  infoTextContainer: { marginLeft: 12, flex: 1 },
+  infoLabel: { fontSize: 14, color: '#6b7280', marginBottom: 2 },
+  infoValue: { fontSize: 16, color: '#111827', fontWeight: '600' },
+  infoSubValue: { fontSize: 14, color: '#4b5563', marginTop: 2 },
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginBottom: 12 },
+  description: { fontSize: 16, color: '#4b5563', lineHeight: 24 },
+  ticketCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+  ticketInfo: { marginBottom: 16 },
+  ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  ticketType: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  ticketLocation: { fontSize: 13, color: '#6b7280' },
+  price: { fontSize: 18, fontWeight: '700', color: '#059669' },
+  sellerText: { fontSize: 12, color: '#6b7280', marginTop: 4 },
+  noTicketsContainer: { alignItems: 'center', padding: 24, backgroundColor: '#f9fafb', borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: '#e5e7eb' },
+  noTicketsTitle: { fontSize: 16, fontWeight: '600', color: '#374151', marginTop: 12 },
 });

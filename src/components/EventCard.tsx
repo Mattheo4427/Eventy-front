@@ -6,10 +6,19 @@ import { Event } from '../types';
 interface EventCardProps {
   event: Event;
   onViewEvent: (eventId: string) => void;
-  
+  // AJOUT : Ces props sont obligatoires pour que EventList ne plante pas
+  isFavorite?: boolean;
+  onToggleFavorite?: (eventId: string) => void;
+  showFavoriteButton?: boolean;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, onViewEvent }) => {
+export const EventCard: React.FC<EventCardProps> = ({ 
+  event, 
+  onViewEvent, 
+  isFavorite = false, 
+  onToggleFavorite, 
+  showFavoriteButton = false 
+}) => {
   
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Date inconnue';
@@ -25,22 +34,46 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onViewEvent }) => {
     <TouchableOpacity 
       style={styles.card} 
       onPress={() => onViewEvent(event.id)}
-      activeOpacity={0.7}
+      activeOpacity={0.9}
     >
-      <Image 
-        source={{ uri: event.imageUrl || 'https://via.placeholder.com/400x200?text=Eventy' }} 
-        style={styles.image}
-        resizeMode="cover"
-      />
+      {/* Conteneur Image */}
+      <View style={styles.imageContainer}>
+        <Image 
+          // Utilisation d'une image par défaut robuste
+          source={{ uri: event.imageUrl || 'https://via.placeholder.com/400x200?text=Eventy' }} 
+          style={styles.image}
+          resizeMode="cover"
+        />
+        
+        {/* Badge Statut (si non actif) */}
+        {event.status !== 'active' && (
+          <View style={[styles.badge, event.status === 'canceled' ? styles.badgeRed : styles.badgeOrange]}>
+            <Text style={styles.badgeText}>{event.status}</Text>
+          </View>
+        )}
+
+        {/* Bouton Favori (Coeur) - Conditionnel */}
+        {showFavoriteButton && onToggleFavorite && (
+          <TouchableOpacity 
+            style={styles.favoriteButton}
+            onPress={(e) => {
+              e.stopPropagation(); // Empêche d'ouvrir le détail quand on clique sur le coeur
+              onToggleFavorite(event.id);
+            }}
+          >
+            <Ionicons 
+              name={isFavorite ? "heart" : "heart-outline"} 
+              size={22} 
+              color={isFavorite ? "#ef4444" : "#ffffff"} 
+            />
+          </TouchableOpacity>
+        )}
+      </View>
       
+      {/* Contenu Texte */}
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={1}>{event.name}</Text>
-          {event.status !== 'active' && (
-            <View style={[styles.badge, event.status === 'canceled' ? styles.badgeRed : styles.badgeOrange]}>
-              <Text style={styles.badgeText}>{event.status}</Text>
-            </View>
-          )}
         </View>
 
         {event.categoryLabel && (
@@ -64,59 +97,80 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onViewEvent }) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 3,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  imageContainer: {
+    position: 'relative',
   },
   image: {
     width: '100%',
-    height: 150,
+    height: 160,
     backgroundColor: '#e5e7eb',
   },
   content: {
-    padding: 12,
+    padding: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#111827',
     flex: 1,
-    marginRight: 8,
   },
   category: {
     fontSize: 12,
     color: '#2563eb',
-    fontWeight: '600',
-    marginBottom: 8,
+    fontWeight: '700',
+    marginBottom: 10,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 6,
   },
   infoText: {
-    marginLeft: 6,
+    marginLeft: 8,
     color: '#4b5563',
     fontSize: 14,
+    fontWeight: '500',
   },
+  // Styles Badges et Boutons
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    zIndex: 10,
   },
   badgeRed: { backgroundColor: '#fee2e2' },
   badgeOrange: { backgroundColor: '#ffedd5' },
-  badgeText: { fontSize: 10, fontWeight: 'bold', color: '#374151' }
+  badgeText: { fontSize: 12, fontWeight: 'bold', color: '#374151', textTransform: 'uppercase' },
+  
+  favoriteButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 20,
+    padding: 8,
+    zIndex: 10,
+  }
 });
