@@ -1,299 +1,174 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { CustomModal } from './ui/Modal';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
-import { Card, CardContent } from './ui/Card';
+import { TicketService } from '../services/TicketService';
 import { Event } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SellTicketModalProps {
   visible: boolean;
-  events: Event[];
-  onSell: (ticketData: any) => void;
+  event: Event | null; // L'événement pour lequel on vend
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-export function SellTicketModal({ visible, events, onSell, onClose }: SellTicketModalProps) {
-  const [eventId, setEventId] = useState('');
-  const [section, setSection] = useState('');
-  const [row, setRow] = useState('');
-  const [seat, setSeat] = useState('');
-  const [originalPrice, setOriginalPrice] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+export function SellTicketModal({ visible, event, onClose, onSuccess }: SellTicketModalProps) {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [ticketTypes, setTicketTypes] = useState<any[]>([]);
 
-  const resetForm = () => {
-    setEventId('');
-    setSection('');
-    setRow('');
-    setSeat('');
-    setOriginalPrice('');
-    setPrice('');
-    setDescription('');
-  };
+  // Formulaire
+  const [form, setForm] = useState({
+    ticketTypeId: '11111111-1111-1111-1111-111111111111', // Standard par défaut
+    originalPrice: '',
+    salePrice: '',
+    section: '',
+    row: '',
+    seat: '',
+    description: ''
+  });
 
-  const handleSell = async () => {
-    if (!eventId || !section || !row || !seat || !originalPrice || !price) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
+  useEffect(() => {
+    // Charger les types de billets
+    TicketService.getTicketTypes().then(setTicketTypes);
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!user) {
+      Alert.alert("Erreur", "Vous devez être connecté pour vendre.");
+      return;
+    }
+    if (!event) return;
+    if (!form.salePrice || !form.originalPrice) {
+      Alert.alert("Erreur", "Les prix sont obligatoires.");
       return;
     }
 
-    const originalPriceNum = parseFloat(originalPrice);
-    const priceNum = parseFloat(price);
-
-    if (isNaN(originalPriceNum) || isNaN(priceNum) || originalPriceNum <= 0 || priceNum <= 0) {
-      Alert.alert('Error', 'Please enter valid prices');
-      return;
-    }
-
-    if (priceNum > originalPriceNum * 1.5) {
-      Alert.alert('Error', 'The sale price cannot exceed 150% of the original price');
-      return;
-    }
-
-    setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      const ticketData = {
-        eventId,
-        section,
-        row,
-        seat,
-        originalPrice: originalPriceNum,
-        price: priceNum,
-        description: description.trim() || undefined,
+    setLoading(true);
+    try {
+      const payload = {
+        eventId: event.id,
+        vendorId: user.id, // L'utilisateur connecté
+        ticketTypeId: form.ticketTypeId,
+        originalPrice: parseFloat(form.originalPrice),
+        salePrice: parseFloat(form.salePrice),
+        section: form.section,
+        row: form.row ? parseInt(form.row) : null, // Conversion en entier pour le backend
+        seat: form.seat,
+        description: form.description
       };
 
-      onSell(ticketData);
-      resetForm();
-      setIsLoading(false);
-      Alert.alert('Succès', 'Votre billet a été mis en vente !');
-    }, 1000);
+      await TicketService.createTicket(payload);
+      
+      Alert.alert("Succès", "Votre billet est en vente !");
+      onSuccess(); // Rafraîchir la liste
+      onClose();
+      
+      // Reset form
+      setForm({ ...form, originalPrice: '', salePrice: '', section: '', row: '', seat: '' });
+      
+    } catch (error) {
+      console.error("Erreur vente", error);
+      Alert.alert("Erreur", "Impossible de mettre en vente le billet.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
+  if (!event) return null;
 
   return (
-    <CustomModal
-      visible={visible}
-      onClose={onClose}
-      title="Sell a ticket"
-    >
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.form}>
-          <Card style={styles.infoCard}>
-            <CardContent>
-              <Text style={styles.infoText}>
-                📝 Remplissez les informations de votre billet pour le mettre en vente
-              </Text>
-            </CardContent>
-          </Card>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Event *</Text>
-            <TouchableOpacity 
-              style={styles.pickerButton}
-              onPress={() => {
-                if (events.length > 0) {
-                  Alert.alert(
-                    'Select an event',
-                    'Choose an event',
-                    events.map(event => ({
-                      text: `${event.title} - ${new Date(event.date).toLocaleDateString('en-US')}`,
-                      onPress: () => setEventId(event.id)
-                    })).concat([{ text: 'Cancel', onPress: () => {} }])
-                  );
-                }
-              }}
-            >
-              <Text style={[styles.pickerButtonText, !eventId && styles.placeholderText]}>
-                {eventId ? events.find(e => e.id === eventId)?.title : 'Select an event'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#6b7280" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.flex1]}>
-              <Text style={styles.label}>Section *</Text>
-              <Input
-                placeholder="VIP, Standard, Tribune..."
-                value={section}
-                onChangeText={setSection}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.flex1]}>
-              <Text style={styles.label}>Rang *</Text>
-              <Input
-                placeholder="A, B, C..."
-                value={row}
-                onChangeText={setRow}
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Siège *</Text>
-            <Input
-              placeholder="Numéro de siège"
-              value={seat}
-              onChangeText={setSeat}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.flex1]}>
-              <Text style={styles.label}>Original price *</Text>
-              <Input
-                placeholder="0"
-                value={originalPrice}
-                onChangeText={setOriginalPrice}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.flex1]}>
-              <Text style={styles.label}>Sale price *</Text>
-              <Input
-                placeholder="0"
-                value={price}
-                onChangeText={setPrice}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          {price && originalPrice && (
-            <View style={styles.priceHelper}>
-              {parseFloat(price) < parseFloat(originalPrice) && (
-                <Text style={styles.savingsText}>
-                  💰 Buyers will save {parseFloat(originalPrice) - parseFloat(price)}€
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <View style={styles.container}>
+        <Text style={styles.title}>Vendre un billet</Text>
+        <Text style={styles.subtitle}>{event.name}</Text>
+        
+        <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+          
+          {/* Sélection Type */}
+          <Text style={styles.label}>Type de billet</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeContainer}>
+            {ticketTypes.map(type => (
+              <TouchableOpacity 
+                key={type.id}
+                style={[styles.typeChip, form.ticketTypeId === type.id && styles.typeChipActive]}
+                onPress={() => setForm({...form, ticketTypeId: type.id})}
+              >
+                <Text style={[styles.typeText, form.ticketTypeId === type.id && styles.typeTextActive]}>
+                  {type.label}
                 </Text>
-              )}
-              {parseFloat(price) > parseFloat(originalPrice) && (
-                <Text style={styles.warningText}>
-                  ⚠️ Price higher than original (+{parseFloat(price) - parseFloat(originalPrice)}€)
-                </Text>
-              )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Prix */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Input 
+                label="Prix d'origine (€)" 
+                value={form.originalPrice} 
+                onChangeText={t => setForm({...form, originalPrice: t})} 
+                keyboardType="numeric"
+                placeholder="50.00"
+              />
             </View>
-          )}
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description (optional)</Text>
-            <Input
-              placeholder="Informations supplémentaires sur le billet..."
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={3}
-              style={styles.textArea}
-            />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Input 
+                label="Prix de vente (€)" 
+                value={form.salePrice} 
+                onChangeText={t => setForm({...form, salePrice: t})} 
+                keyboardType="numeric"
+                placeholder="45.00"
+              />
+            </View>
           </View>
 
-          <View style={styles.actions}>
-            <Button
-              title="Cancel"
-              variant="outline"
-              onPress={handleClose}
-              style={styles.cancelButton}
-              disabled={isLoading}
-            />
-            <Button
-              title={isLoading ? "Publishing..." : "Put on sale"}
-              onPress={handleSell}
-              style={styles.sellButton}
-              disabled={isLoading}
-            />
+          {/* Localisation */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Input label="Section" value={form.section} onChangeText={t => setForm({...form, section: t})} placeholder="A, Nord..." />
+            </View>
+            <View style={{ flex: 0.6, marginRight: 8 }}>
+              <Input label="Rang" value={form.row} onChangeText={t => setForm({...form, row: t})} keyboardType="numeric" />
+            </View>
+            <View style={{ flex: 0.6 }}>
+              <Input label="Siège" value={form.seat} onChangeText={t => setForm({...form, seat: t})} />
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </CustomModal>
+          
+          <Button 
+            title={loading ? "Publication..." : "Mettre en vente"} 
+            onPress={handleSubmit} 
+            disabled={loading} 
+            style={{ marginTop: 24 }} 
+            variant="primary"
+          />
+          <Button 
+            title="Annuler" 
+            onPress={onClose} 
+            variant="outline" 
+            style={{ marginTop: 12, marginBottom: 30 }} 
+          />
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  form: {
-    gap: 20,
+  container: { flex: 1, padding: 20, backgroundColor: '#fff', paddingTop: 60 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
+  subtitle: { fontSize: 16, color: '#6b7280', marginBottom: 24 },
+  form: { flex: 1 },
+  row: { flexDirection: 'row', justifyContent: 'space-between' },
+  label: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8 },
+  typeContainer: { flexDirection: 'row', marginBottom: 16, maxHeight: 40 },
+  typeChip: {
+    paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#f3f4f6',
+    borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: '#e5e7eb'
   },
-  infoCard: {
-    backgroundColor: '#f0f9ff',
-    borderWidth: 1,
-    borderColor: '#0ea5e9',
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#0369a1',
-    lineHeight: 20,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  pickerButton: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  pickerButtonText: {
-    fontSize: 16,
-    color: '#111827',
-  },
-  placeholderText: {
-    color: '#6b7280',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  flex1: {
-    flex: 1,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
-  priceHelper: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  savingsText: {
-    fontSize: 14,
-    color: '#059669',
-    lineHeight: 20,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#dc2626',
-    lineHeight: 20,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  cancelButton: {
-    flex: 1,
-  },
-  sellButton: {
-    flex: 1,
-  },
+  typeChipActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
+  typeText: { color: '#374151', fontWeight: '500' },
+  typeTextActive: { color: '#fff' }
 });

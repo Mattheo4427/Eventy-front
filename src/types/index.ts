@@ -41,16 +41,32 @@ export interface EventCategory {
 export interface Ticket {
   id: string;
   eventId: string;
-  sellerId: string;
-  sellerName: string;
-  price: number;
+  
+  // Infos Vendeur
+  vendorId: string;    // Correspond à 'vendor_id' du backend
+  sellerName?: string; // Champ enrichi par le DTO backend ou le front
+  
+  // Infos Billet
+  ticketTypeLabel?: string; // Label du type (Standard, VIP...) via la relation TicketType
+  
+  // Prix
   originalPrice: number;
-  section: string;
-  row: string;
-  seat: string;
-  description?: string;
-  salePrice: number;
-  status: 'available' | 'sold' | 'pending';
+  salePrice: number;   // Le prix de vente effectif
+  
+  // Localisation
+  section?: string;    // String en backend
+  row?: number;        // Integer en backend
+  seat?: string;
+  
+  // Statut & Gestion
+  status: 'AVAILABLE' | 'RESERVED' | 'SOLD' | 'CANCELED';
+  
+  // Codes (Optionnels car pas toujours exposés)
+  barcode?: string;
+  qrCode?: string;
+  
+  // Métadonnées
+  creationDate?: string; // ISO String
 }
 
 export interface Transaction {
