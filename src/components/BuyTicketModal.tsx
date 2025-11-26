@@ -5,6 +5,8 @@ import { CustomModal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Ticket, Event } from '../types';
+import { useStripe } from '@stripe/stripe-react-native';
+import { ScrollView } from 'react-native';
 
 interface BuyTicketModalProps {
   visible: boolean;
@@ -16,22 +18,37 @@ interface BuyTicketModalProps {
 
 export function BuyTicketModal({ visible, ticket, event, onBuy, onClose }: BuyTicketModalProps) {
   const formatPrice = (price: number) => `${price}€`;
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-  const handlePurchase = () => {
-    Alert.alert(
-      'Confirm purchase',
-      `Do you really want to buy this ticket for ${formatPrice(ticket.price)}?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Buy',
-          onPress: () => onBuy()
-        }
-      ]
-    );
+  const handleStripePurchase = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/transactions/payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: ticket.price * 100 }),
+      });
+      const { clientSecret } = await response.json();
+
+      // Pass clientSecret as paymentIntentClientSecret, not inside intentConfiguration
+      const initResult = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: 'Eventy',
+      });
+      if (initResult.error) {
+        Alert.alert('Stripe Error', initResult.error.message);
+        return;
+      }
+
+      const { error } = await presentPaymentSheet();
+      if (error) {
+        Alert.alert('Payment failed', error.message);
+      } else {
+        Alert.alert('Payment successful', 'Your ticket has been purchased!');
+        onBuy();
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Could not initiate payment.');
+    }
   };
 
   const savings = ticket.originalPrice - ticket.price;
@@ -42,111 +59,101 @@ export function BuyTicketModal({ visible, ticket, event, onBuy, onClose }: BuyTi
       onClose={onClose}
       title="Buy a ticket"
     >
-      <View style={styles.container}>
-        {/* Event Info */}
-        <Card style={styles.eventCard}>
-          <CardContent>
-            <Text style={styles.eventTitle}>{event.title}</Text>
-            <View style={styles.eventMeta}>
-              <View style={styles.metaItem}>
-                <Ionicons name="calendar" size={16} color="#6b7280" />
-                <Text style={styles.metaText}>
-                  {new Date(event.date).toLocaleDateString('fr-FR')}
-                </Text>
+      <ScrollView style={{ maxHeight: 500 }}>
+        <View style={styles.container}>
+          {/* ...existing event, ticket, and price summary cards... */}
+          <Card style={styles.eventCard}>
+            <CardContent>
+              <Text style={styles.eventTitle}>{event.title}</Text>
+              <View style={styles.eventMeta}>
+                <View style={styles.metaItem}>
+                  <Ionicons name="calendar" size={16} color="#6b7280" />
+                  <Text style={styles.metaText}>
+                    {new Date(event.date).toLocaleDateString('fr-FR')}
+                  </Text>
+                </View>
+                <View style={styles.metaItem}>
+                  <Ionicons name="location" size={16} color="#6b7280" />
+                  <Text style={styles.metaText}>{event.venue}</Text>
+                </View>
               </View>
-              <View style={styles.metaItem}>
-                <Ionicons name="location" size={16} color="#6b7280" />
-                <Text style={styles.metaText}>{event.venue}</Text>
+            </CardContent>
+          </Card>
+          <Card style={styles.ticketCard}>
+            <CardContent>
+              <Text style={styles.sectionTitle}>Détails du billet</Text>
+              <View style={styles.ticketInfo}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Section:</Text>
+                  <Text style={styles.infoValue}>{ticket.section}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Rang:</Text>
+                  <Text style={styles.infoValue}>{ticket.row}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Siège:</Text>
+                  <Text style={styles.infoValue}>{ticket.seat}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Vendeur:</Text>
+                  <Text style={styles.infoValue}>{ticket.sellerName}</Text>
+                </View>
               </View>
-            </View>
-          </CardContent>
-        </Card>
-
-        {/* Ticket Details */}
-        <Card style={styles.ticketCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Détails du billet</Text>
-            
-            <View style={styles.ticketInfo}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Section:</Text>
-                <Text style={styles.infoValue}>{ticket.section}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Rang:</Text>
-                <Text style={styles.infoValue}>{ticket.row}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Siège:</Text>
-                <Text style={styles.infoValue}>{ticket.seat}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Vendeur:</Text>
-                <Text style={styles.infoValue}>{ticket.sellerName}</Text>
-              </View>
-            </View>
-
-            {ticket.description && (
-              <View style={styles.description}>
-                <Text style={styles.descriptionLabel}>Description:</Text>
-                <Text style={styles.descriptionText}>{ticket.description}</Text>
-              </View>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Price Summary */}
-        <Card style={styles.priceCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Price summary</Text>
-            
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Ticket price:</Text>
-              <Text style={styles.priceValue}>{formatPrice(ticket.price)}</Text>
-            </View>
-            
-            {savings > 0 && (
+              {ticket.description && (
+                <View style={styles.description}>
+                  <Text style={styles.descriptionLabel}>Description:</Text>
+                  <Text style={styles.descriptionText}>{ticket.description}</Text>
+                </View>
+              )}
+            </CardContent>
+          </Card>
+          <Card style={styles.priceCard}>
+            <CardContent>
+              <Text style={styles.sectionTitle}>Price summary</Text>
               <View style={styles.priceRow}>
-                <Text style={styles.savingsLabel}>Savings:</Text>
-                <Text style={styles.savingsValue}>-{formatPrice(savings)}</Text>
+                <Text style={styles.priceLabel}>Ticket price:</Text>
+                <Text style={styles.priceValue}>{formatPrice(ticket.price)}</Text>
               </View>
-            )}
-            
-            {ticket.originalPrice > ticket.price && (
-              <View style={styles.priceRow}>
-                <Text style={styles.originalPriceLabel}>Original price:</Text>
-                <Text style={styles.originalPriceValue}>
-                  {formatPrice(ticket.originalPrice)}
-                </Text>
+              {savings > 0 && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.savingsLabel}>Savings:</Text>
+                  <Text style={styles.savingsValue}>-{formatPrice(savings)}</Text>
+                </View>
+              )}
+              {ticket.originalPrice > ticket.price && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.originalPriceLabel}>Original price:</Text>
+                  <Text style={styles.originalPriceValue}>
+                    {formatPrice(ticket.originalPrice)}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.separator} />
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total to pay:</Text>
+                <Text style={styles.totalValue}>{formatPrice(ticket.price)}</Text>
               </View>
-            )}
-            
-            <View style={styles.separator} />
-            
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total to pay:</Text>
-              <Text style={styles.totalValue}>{formatPrice(ticket.price)}</Text>
-            </View>
-          </CardContent>
-        </Card>
-
-        {/* Actions */}
-                <View style={styles.actions}>
-          <Button
-            title="Cancel"
-            variant="outline"
-            onPress={onClose}
-            size="lg"
-            style={styles.cancelButton}
-          />
-          <Button
-            title={`Buy - ${formatPrice(ticket.price)}`}
-            onPress={handlePurchase}
-            size="lg"
-            style={styles.buyButton}
-          />
+            </CardContent>
+          </Card>
+          {/* Actions stacked vertically */}
+          <View style={styles.actionsVertical}>
+            <Button
+              title="Cancel"
+              variant="outline"
+              onPress={onClose}
+              size="lg"
+              style={styles.cancelButtonVertical}
+            />
+            <Button
+              title={`Pay with Stripe - ${formatPrice(ticket.price)}`}
+              onPress={handleStripePurchase}
+              size="lg"
+              style={styles.buyButtonVertical}
+            />
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </CustomModal>
   );
 }
@@ -272,15 +279,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#059669',
   },
-  actions: {
-    flexDirection: 'row',
+  actionsVertical: {
+    flexDirection: 'column',
     gap: 12,
-    marginTop: 8,
+    marginTop: 16,
+    alignItems: 'stretch',
   },
-  cancelButton: {
-    flex: 1,
+  cancelButtonVertical: {
+    width: '100%',
   },
-  buyButton: {
-    flex: 1,
+  buyButtonVertical: {
+    width: '100%',
   },
 });

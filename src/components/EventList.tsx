@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,33 @@ import { EventCard } from './EventCard';
 import { Card, CardContent } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { BuyTicketModal } from './BuyTicketModal';
+
+// --- Mock data ---
+const mockEvent: Event = {
+  id: 'evt_1',
+  title: 'Mock Concert',
+  date: new Date().toISOString(),
+  venue: 'Mock Arena',
+  location: 'Paris',
+  category: 'Music',
+  description: 'A great mock concert event!',
+  image: 'https://placehold.co/600x400',
+};
+
+const mockTicket: Ticket = {
+  id: 'tkt_1',
+  eventId: 'evt_1',
+  sellerId: 'user_1',
+  section: 'A',
+  row: '5',
+  seat: '12',
+  sellerName: 'John Doe',
+  price: 25,
+  originalPrice: 40,
+  description: 'Front row seat for the best experience!',
+  status: 'available',
+};
 
 interface EventListProps {
   events: Event[];
@@ -18,6 +45,7 @@ export function EventList({ events, onViewEvent, onSellTicket }: EventListProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [modalVisible, setModalVisible] = useState(false);
   const { t } = useTranslation();
 
   const filteredEvents = events.filter(event => {
@@ -25,7 +53,6 @@ export function EventList({ events, onViewEvent, onSellTicket }: EventListProps)
                          event.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || event.category === categoryFilter;
     const matchesLocation = locationFilter === 'all' || event.location === locationFilter;
-    
     return matchesSearch && matchesCategory && matchesLocation;
   });
 
@@ -179,6 +206,22 @@ export function EventList({ events, onViewEvent, onSellTicket }: EventListProps)
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Mock payment test button */}
+      <Button
+        title="Test Buy Mock Ticket"
+        onPress={() => setModalVisible(true)}
+        style={{ margin: 20 }}
+      />
+
+      {/* Payment Modal for testing */}
+      <BuyTicketModal
+        visible={modalVisible}
+        ticket={mockTicket}
+        event={mockEvent}
+        onBuy={() => setModalVisible(false)}
+        onClose={() => setModalVisible(false)}
+      />
 
       {filteredEvents.length === 0 && (
         <View style={styles.emptyState}>
