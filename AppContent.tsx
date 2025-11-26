@@ -133,16 +133,16 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
     const newTicket: Ticket = {
       id: `ticket_${Date.now()}`,
       eventId: ticketData.eventId,
-      sellerId: currentUser.id,
+      vendorId: currentUser.id,
       sellerName: currentUser.name,
-      price: ticketData.price,
+      salePrice: ticketData.price,
       originalPrice: ticketData.originalPrice,
       section: ticketData.section,
       row: ticketData.row,
       seat: ticketData.seat,
-      description: ticketData.description,
-      status: 'available',
-      salePrice: ticketData.price
+      //description: ticketData.description,
+      status: 'AVAILABLE',
+      //salePrice: ticketData.price
     };
     
     setTickets(prev => [...prev, newTicket]);
@@ -370,7 +370,7 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
         return (
           <UserProfile 
             user={currentUser}
-            tickets={tickets.filter(t => t.sellerId === currentUser.id)}
+            tickets={tickets.filter(t => t.vendorId === currentUser.id)}
             events={events}
             // @ts-ignore
             onReportUser={(userId: string, userName: string) => openReportModal('user', userId, userName)}
@@ -426,8 +426,9 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
         {/* ... (tous vos autres modals restent identiques) ... */}
         <SellTicketModal 
           visible={showSellModal}
-          events={events}
-          onSell={handleTicketListing}
+          event={events.find(e => e.id === selectedEventId) || null}
+          //onSell={handleTicketListing}
+          onSuccess={() => void 0}
           onClose={() => setShowSellModal(false)}
         />
 
@@ -436,7 +437,8 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
             visible={showBuyModal}
             ticket={selectedTicket}
             event={events.find(e => e.id === selectedTicket.eventId)!}
-            onBuy={() => handleTicketPurchase(selectedTicket.id)}
+            //onBuy={() => handleTicketPurchase(selectedTicket.id)}
+            onSuccess={() => void 0}
             onClose={() => {
               setShowBuyModal(false);
               setSelectedTicket(null);

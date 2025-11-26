@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Language = 'en' | 'fr' | 'es';
@@ -17,9 +18,11 @@ interface LanguageProviderProps {
 }
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const [currentLanguage, setCurrentLanguage] = useState<Language>('en');
+  // On initialise le state avec la langue actuelle de l'instance i18n
+  const [currentLanguage, setCurrentLanguage] = useState<Language>(i18n.language as Language || 'en');
   const [isLoading, setIsLoading] = useState(true);
-  const { i18n } = useTranslation();
+  
+  // Plus besoin de const { i18n } = useTranslation(); ici
 
   // Load saved language preference on app start
   useEffect(() => {
@@ -28,8 +31,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         const savedLanguage = await AsyncStorage.getItem('appLanguage');
         if (savedLanguage && ['en', 'fr', 'es'].includes(savedLanguage)) {
           const language = savedLanguage as Language;
+          
+          // Si la langue sauvegardée est différente de la langue par défaut
+          if (language !== i18n.language) {
+              await i18n.changeLanguage(language);
+          }
           setCurrentLanguage(language);
-          await i18n.changeLanguage(language);
         }
       } catch (error) {
         console.warn('Error loading saved language:', error);
@@ -39,12 +46,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     };
 
     loadSavedLanguage();
-  }, [i18n]);
+  }, []); // Dépendance vide, on ne veut le lancer qu'une fois
 
   const changeLanguage = async (language: Language) => {
     try {
+      await i18n.changeLanguage(language); // Utilisation de l'instance importée
       setCurrentLanguage(language);
-      await i18n.changeLanguage(language);
       await AsyncStorage.setItem('appLanguage', language);
     } catch (error) {
       console.error('Error changing language:', error);
