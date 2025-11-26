@@ -16,7 +16,8 @@ import {
   FavoritesManager,
   ReportModal,
   ReportManagement,
-  FavoriteButton
+  FavoriteButton,
+  EventTickets
 } from './src/components';
 import {
   User,
@@ -55,12 +56,14 @@ export default function AppContent() {
     }
   }, [currentUser]);
   
-  const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail' | 'profile' | 'admin'>('home');
+const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail' | 'event-tickets' | 'profile' | 'admin' | 'notifications' | 'messages'>('home');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showSellModal, setShowSellModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+  
 
   // ... (tous les autres états restent identiques) ...
   const [showNotifications, setShowNotifications] = useState(false);
@@ -112,14 +115,7 @@ export default function AppContent() {
   
   // === MODIFICATION ===
   // Ces fonctions vérifient 'isAuthenticated' du contexte
-  const handleBuyTicket = (ticket: Ticket) => {
-    if (!isAuthenticated) { // Utilise isAuthenticated
-      setShowLoginModal(true);
-      return;
-    }
-    setSelectedTicket(ticket);
-    setShowBuyModal(true);
-  };
+
 
   const handleSellTicket = () => {
     if (!isAuthenticated) { // Utilise isAuthenticated
@@ -131,47 +127,6 @@ export default function AppContent() {
   // ====================
 
   // ... (handleTicketPurchase et handleTicketListing restent identiques pour l'instant) ...
-  const handleTicketPurchase = (ticketId: string) => {
-    if (!currentUser || !selectedTicket) return;
-    
-    const ticket = tickets.find(t => t.id === ticketId);
-    const event = events.find(e => e.id === ticket?.eventId);
-    
-    if (!ticket || !event) return;
-    
-    // Créer la transaction
-    const transaction: Transaction = {
-      id: `trans_${Date.now()}`,
-      ticketId,
-      buyerId: currentUser.id,
-      //sellerId: ticket.sellerId,
-      totalAmount: ticket.price,
-      platformFee: 0, // À ajuster selon la logique métier
-      vendorAmount: ticket.price, // À ajuster selon la logique métier
-      transactionDate: new Date().toISOString(),
-      status: 'COMPLETED',
-      paymentMethod: 'CREDIT_CARD',
-      paymentStatus: 'PAID'
-    };
-    
-    setTransactions(prev => [...prev, transaction]);
-    
-    // Mettre à jour le statut du billet
-    setTickets(prev => prev.map(t => 
-      t.id === ticketId ? { ...t, status: 'sold' as const } : t
-    ));
-    
-    // Envoyer les notifications (logique fictive)
-    const purchaseNotification = NotificationService.createPurchaseConfirmation(currentUser.id, transaction, event);
-    addNotification(purchaseNotification);
-    
-    const saleNotification = NotificationService.createSaleSuccess(ticket.sellerId, transaction, event);
-    addNotification(saleNotification);
-    
-    setShowBuyModal(false);
-    setSelectedTicket(null);
-  };
-
   const handleTicketListing = (ticketData: any) => {
     if (!currentUser) return;
     
@@ -388,9 +343,21 @@ export default function AppContent() {
         return (
           <EventDetail 
             eventId={selectedEventId} // On passe juste l'ID
-            onBuyTicket={handleBuyTicket}
+            //onBuyTicket={handleBuyTicket}
+            onViewTickets={(id) => setCurrentView('event-tickets')}
             onBack={() => setCurrentView('events')}
             // Retirer tickets={...} car EventDetail les charge lui-même
+          />
+        );
+
+      case 'event-tickets':
+        // Sécurité : Si on refresh et qu'on perd l'ID, on ne peut pas afficher la liste
+        if (!selectedEventId) return null; 
+        
+        return (
+          <EventTickets 
+            eventId={selectedEventId}
+            onBack={() => setCurrentView('event-detail')}
           />
         );
       case 'profile':

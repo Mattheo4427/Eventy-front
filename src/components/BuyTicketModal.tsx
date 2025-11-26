@@ -1,286 +1,179 @@
-import React from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { CustomModal } from './ui/Modal';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Modal, ActivityIndicator, Alert, Image, TouchableOpacity } from 'react-native';
+import { useStripe } from '@stripe/stripe-react-native'; // <--- Hook Stripe
 import { Button } from './ui/Button';
-import { Card, CardContent } from './ui/Card';
 import { Ticket, Event } from '../types';
+import { TransactionService } from '../services/TransactionService';
+import { Ionicons } from '@expo/vector-icons';
 
 interface BuyTicketModalProps {
   visible: boolean;
   ticket: Ticket;
   event: Event;
-  onBuy: () => void;
   onClose: () => void;
+  onSuccess: () => void; // Callback appelé après succès
 }
 
-export function BuyTicketModal({ visible, ticket, event, onBuy, onClose }: BuyTicketModalProps) {
-  const formatPrice = (price: number) => `${price}€`;
+export function BuyTicketModal({ visible, ticket, event, onClose, onSuccess }: BuyTicketModalProps) {
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const [loading, setLoading] = useState(false);
+  const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null); // AJOUT
 
-  const handlePurchase = () => {
-    Alert.alert(
-      'Confirm purchase',
-      `Do you really want to buy this ticket for ${formatPrice(ticket.price)}?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Buy',
-          onPress: () => onBuy()
-        }
-      ]
-    );
+  // 1. Initialiser le paiement
+  const initializePayment = async () => {
+    setLoading(true);
+    try {
+      // A. Demander au backend de créer l'intention de paiement
+      const { clientSecret, transactionId } = await TransactionService.createPaymentIntent(
+        ticket.id,
+        ticket.salePrice
+      );
+
+      setCurrentTransactionId(transactionId); // AJOUT
+
+      // B. Initialiser la feuille de paiement Stripe
+      const { error } = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: 'Eventy',
+        returnURL: 'eventy://stripe-redirect', // Pour le retour d'app (deeplinking)
+        // Configuration optionnelle pour Apple Pay / Google Pay
+        applePay: { merchantCountryCode: 'FR' },
+        googlePay: { merchantCountryCode: 'FR', testEnv: true },
+      });
+
+      if (error) {
+        Alert.alert('Erreur', "Impossible d'initialiser le paiement.");
+        setLoading(false);
+        return;
+      }
+
+      // C. Ouvrir la feuille de paiement
+      openPaymentSheet(transactionId);
+
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Erreur', "Erreur de communication avec le serveur.");
+      setLoading(false);
+    }
   };
 
-  const savings = ticket.originalPrice - ticket.price;
+  // 2. Présenter la feuille et gérer le résultat
+  const openPaymentSheet = async (transactionId: string) => {
+    const { error } = await presentPaymentSheet();
+
+    if (error) {
+      Alert.alert(`Paiement annulé`, error.message);
+      setLoading(false);
+    } else {
+      try {
+        // 1. On confirme au backend que le paiement est fait
+        await TransactionService.confirmTransaction(transactionId);
+        
+        Alert.alert('Succès', 'Votre paiement est confirmé ! Le billet est à vous.');
+        onSuccess();
+        onClose();
+      } catch (e) {
+        console.error("Erreur confirmation backend", e);
+        Alert.alert("Attention", "Paiement réussi mais erreur de validation. Contactez le support.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   return (
-    <CustomModal
-      visible={visible}
-      onClose={onClose}
-      title="Buy a ticket"
-    >
-      <View style={styles.container}>
-        {/* Event Info */}
-        <Card style={styles.eventCard}>
-          <CardContent>
-            <Text style={styles.eventTitle}>{event.title}</Text>
-            <View style={styles.eventMeta}>
-              <View style={styles.metaItem}>
-                <Ionicons name="calendar" size={16} color="#6b7280" />
-                <Text style={styles.metaText}>
-                  {new Date(event.date).toLocaleDateString('fr-FR')}
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          {/* Header avec Image */}
+          <View style={styles.header}>
+            <Image 
+                source={{ uri: event.imageUrl || 'https://via.placeholder.com/100' }} 
+                style={styles.eventImage} 
+            />
+            <View style={{flex: 1}}>
+                <Text style={styles.title}>Récapitulatif</Text>
+                <Text style={styles.eventName}>{event.name}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Détails du Billet */}
+          <View style={styles.detailsContainer}>
+            <View style={styles.row}>
+                <Text style={styles.label}>Type</Text>
+                <Text style={styles.value}>{ticket.ticketTypeLabel || 'Standard'}</Text>
+            </View>
+            <View style={styles.row}>
+                <Text style={styles.label}>Place</Text>
+                <Text style={styles.value}>
+                    {ticket.section ? `Sec ${ticket.section}` : ''} {ticket.row ? `Rg ${ticket.row}` : ''}
                 </Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Ionicons name="location" size={16} color="#6b7280" />
-                <Text style={styles.metaText}>{event.venue}</Text>
-              </View>
             </View>
-          </CardContent>
-        </Card>
-
-        {/* Ticket Details */}
-        <Card style={styles.ticketCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Détails du billet</Text>
-            
-            <View style={styles.ticketInfo}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Section:</Text>
-                <Text style={styles.infoValue}>{ticket.section}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Rang:</Text>
-                <Text style={styles.infoValue}>{ticket.row}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Siège:</Text>
-                <Text style={styles.infoValue}>{ticket.seat}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Vendeur:</Text>
-                <Text style={styles.infoValue}>{ticket.sellerName}</Text>
-              </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+                <Text style={styles.totalLabel}>Total à payer</Text>
+                <Text style={styles.totalPrice}>{ticket.salePrice.toFixed(2)} €</Text>
             </View>
+          </View>
 
-            {ticket.description && (
-              <View style={styles.description}>
-                <Text style={styles.descriptionLabel}>Description:</Text>
-                <Text style={styles.descriptionText}>{ticket.description}</Text>
-              </View>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Price Summary */}
-        <Card style={styles.priceCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Price summary</Text>
-            
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Ticket price:</Text>
-              <Text style={styles.priceValue}>{formatPrice(ticket.price)}</Text>
-            </View>
-            
-            {savings > 0 && (
-              <View style={styles.priceRow}>
-                <Text style={styles.savingsLabel}>Savings:</Text>
-                <Text style={styles.savingsValue}>-{formatPrice(savings)}</Text>
-              </View>
-            )}
-            
-            {ticket.originalPrice > ticket.price && (
-              <View style={styles.priceRow}>
-                <Text style={styles.originalPriceLabel}>Original price:</Text>
-                <Text style={styles.originalPriceValue}>
-                  {formatPrice(ticket.originalPrice)}
-                </Text>
-              </View>
-            )}
-            
-            <View style={styles.separator} />
-            
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total to pay:</Text>
-              <Text style={styles.totalValue}>{formatPrice(ticket.price)}</Text>
-            </View>
-          </CardContent>
-        </Card>
-
-        {/* Actions */}
-                <View style={styles.actions}>
-          <Button
-            title="Cancel"
-            variant="outline"
-            onPress={onClose}
-            size="lg"
-            style={styles.cancelButton}
-          />
-          <Button
-            title={`Buy - ${formatPrice(ticket.price)}`}
-            onPress={handlePurchase}
-            size="lg"
-            style={styles.buyButton}
-          />
+          <View style={styles.footer}>
+            <Button 
+              title={loading ? "Chargement..." : "Payer avec Stripe"} 
+              onPress={initializePayment} // Lance le flux
+              disabled={loading}
+              variant="primary"
+              style={styles.payButton}
+              icon={<Ionicons name="card-outline" size={20} color="white" style={{marginRight: 8}}/>}
+            />
+          </View>
         </View>
       </View>
-    </CustomModal>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end', // Affichage type "Bottom Sheet"
+  },
   container: {
-    gap: 16,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    minHeight: 400,
   },
-  eventCard: {
-    backgroundColor: '#f8fafc',
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  eventMeta: {
-    gap: 4,
-  },
-  metaItem: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    marginBottom: 24,
+    gap: 12
   },
-  metaText: {
-    fontSize: 14,
-    color: '#6b7280',
+  eventImage: {
+      width: 60, height: 60, borderRadius: 8, backgroundColor: '#f3f4f6'
   },
-  ticketCard: {},
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
+  title: { fontSize: 14, color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' },
+  eventName: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  closeButton: { padding: 4 },
+  
+  detailsContainer: {
+      backgroundColor: '#f9fafb',
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 24
   },
-  ticketInfo: {
-    gap: 8,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: '#6b7280',
-    flex: 1,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  description: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  descriptionLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  descriptionText: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-  },
-  priceCard: {},
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  priceLabel: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  priceValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  savingsLabel: {
-    fontSize: 14,
-    color: '#059669',
-  },
-  savingsValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#059669',
-  },
-  originalPriceLabel: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  originalPriceValue: {
-    fontSize: 14,
-    color: '#6b7280',
-    textDecorationLine: 'line-through',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#f3f4f6',
-    marginVertical: 12,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#059669',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  cancelButton: {
-    flex: 1,
-  },
-  buyButton: {
-    flex: 1,
-  },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  label: { color: '#6b7280', fontSize: 16 },
+  value: { color: '#111827', fontSize: 16, fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 12 },
+  totalLabel: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  totalPrice: { fontSize: 24, fontWeight: 'bold', color: '#2563eb' },
+
+  footer: { marginTop: 'auto' },
+  payButton: { width: '100%', borderRadius: 12, height: 50 }
 });
