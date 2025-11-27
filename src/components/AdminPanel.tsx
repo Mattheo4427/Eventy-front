@@ -168,7 +168,7 @@ export function AdminPanel() {
   const handleEditUser = (user: User) => { setSelectedUser(user); setShowUserModal(true); };
   const openCreateUser = () => { setSelectedUser(null); setShowUserModal(true); };
   const handleSuspendUser = (user: User) => { 
-      Alert.alert("Suspendre", `Suspendre ${user.name} ?`, [{ text: "Non" }, { text: "Oui", onPress: async () => { await AdminService.suspendUser(user.id); loadData(); }}]);
+      Alert.alert("Suspendre", `Suspendre ${user.firstName} ${user.lastName} ?`, [{ text: "Non" }, { text: "Oui", onPress: async () => { await AdminService.suspendUser(user.id); loadData(); }}]);
   };
   const handleDeleteUser = (user: User) => {
     Alert.alert("Supprimer", "Action irréversible.", [{ text: "Annuler" }, { text: "Supprimer", style: 'destructive', onPress: async () => { await AdminService.deleteUser(user.id); loadData(); }}]);
@@ -225,7 +225,7 @@ export function AdminPanel() {
       const timeStr = trans.transactionDate ? new Date(trans.transactionDate).toLocaleTimeString() : '';
       
       // CRASH FIX : Utilisation de (trans.buyerId || '') avant substring
-      const buyerDisplay = buyer ? buyer.name : (trans.buyerId ? trans.buyerId.substring(0, 8) : 'Inconnu');
+      const buyerDisplay = buyer ? buyer.firstName : (trans.buyerId ? trans.buyerId.substring(0, 8) : 'Inconnu');
 
       return (
           <View style={styles.transCard}>
@@ -293,7 +293,7 @@ export function AdminPanel() {
       return (
         <View style={styles.row}>
           <View style={{flex: 1}}>
-            <Text style={styles.rowTitle}>{item.name}</Text>
+            <Text style={styles.rowTitle}>{item.firstName} {item.lastName}</Text>
             <Text style={styles.rowSubtitle}>{item.email}</Text>
             <View style={{ flexDirection: 'row', marginTop: 4 }}>
               <View style={[styles.badge, item.role === 'ADMIN' ? { backgroundColor: '#fee2e2' } : { backgroundColor: '#dbeafe' }]}>

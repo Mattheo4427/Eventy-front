@@ -244,7 +244,7 @@ export function Header({
                     <View style={styles.userInfo}>
                       <Ionicons name="person-circle-outline" size={32} color="#6b7280" />
                       <View style={styles.userDetails}>
-                        <Text style={styles.userName}>{currentUser.name}</Text>
+                        <Text style={styles.userName}>{currentUser.firstName} {currentUser.lastName}</Text>
                         <Text style={styles.userEmail}>{currentUser.email}</Text>
                       </View>
                     </View>

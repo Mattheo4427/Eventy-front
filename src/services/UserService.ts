@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { Ticket } from '../types';
 import { apiConfig } from '../config';
+import { User } from '../types';
 
 const EXPO_PUBLIC_API_GATEWAY_URL = apiConfig.baseUrl || 'http://localhost:8080/api';
 const api = axios.create({
@@ -46,40 +46,23 @@ api.interceptors.response.use(
   }
 );
 
-export const TicketService = {
+export const UserService = {
   /**
-   * Mettre un billet en vente
-   * Backend attend: TicketRequestDto
+   * Récupère le profil complet de l'utilisateur connecté (inclus le solde à jour)
    */
-  createTicket: async (ticketData: any): Promise<Ticket> => {
-    // POST /tickets (via Gateway -> Tickets Service)
-    const response = await api.post<Ticket>('/tickets', ticketData);
+  getProfile: async (): Promise<User> => {
+    const response = await api.get<User>(`/users/me`);
+    return response.data;
+  },
+  
+
+  getUserById: async (id: string): Promise<User> => {
+    const response = await api.get<User>(`/users/${id}`);
     return response.data;
   },
 
-  /**
-   * Récupérer les types de billets (Standard, VIP...)
-   * Utile pour le formulaire
-   */
-  getTicketTypes: async (): Promise<any[]> => {
-    // Mock pour le MVP si l'endpoint n'existe pas encore, ou appel réel
-    return api.get('/tickets/types').then(r => r.data);
-    
-    // Retourne les IDs insérés par votre script SQL V2
-    return [
-      { id: '11111111-1111-1111-1111-111111111111', label: 'Standard' },
-      { id: '22222222-2222-2222-2222-222222222222', label: 'VIP' },
-      { id: '33333333-3333-3333-3333-333333333333', label: 'Early Bird' },
-      { id: '44444444-4444-4444-4444-444444444444', label: 'Loge' },
-    ];
-  },
-
-  getMyTickets: async (id: string): Promise<Ticket[]> => {
-    // Backend: Il faudrait un endpoint GET /tickets/vendor/{id}
-    // Sinon on filtre côté front (moins performant mais ok pour MVP)
-    // Supposons que le backend a cet endpoint ou un filtre
-    // Pour l'instant, on va utiliser un endpoint fictif ou filtrer getAll
-    const response = await api.get<Ticket[]>(`/tickets/vendeur/${id}`);
+  updateProfile: async (data: Partial<User>): Promise<User> => {
+    const response = await api.put<User>(`/users/me`, data);
     return response.data;
   }
 };

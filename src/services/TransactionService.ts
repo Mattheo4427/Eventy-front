@@ -64,5 +64,10 @@ export const TransactionService = {
   confirmTransaction: async (transactionId: string): Promise<void> => {
     // Appelle l'endpoint POST /transactions/{id}/confirm
     await api.post(`/transactions/${transactionId}/confirm`);
+  },
+
+  getMyHistory: async (): Promise<Transaction[]> => {
+    const response = await api.get<Transaction[]>('/transactions/history');
+    return response.data;
   }
 };

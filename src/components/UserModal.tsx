@@ -27,17 +27,18 @@ export function UserModal({ visible, userToEdit, onClose, onSuccess }: UserModal
  useEffect(() => {
     if (userToEdit) {
       // SÉCURISATION : Vérifier que les champs existent avant de faire split()
-      const nameStr = userToEdit.name || ''; // Fallback chaîne vide
+      const nameStr = userToEdit.username || ''; // Fallback chaîne vide
       const emailStr = userToEdit.email || ''; // Fallback chaîne vide
       
-      const names = nameStr.split(' ');
+      const firstName = userToEdit.firstName || '';
+      const lastName = userToEdit.lastName || '';
       
       setForm({
         // Utilisation de l'opérateur optionnel et valeurs par défaut
-        username: emailStr.includes('@') ? emailStr.split('@')[0] : emailStr, 
+        username: nameStr,
         email: emailStr,
-        firstName: names[0] || '',
-        lastName: names.slice(1).join(' ') || '',
+        firstName: firstName,
+        lastName: lastName,
         password: '', 
         role: userToEdit.role || 'USER' // Fallback rôle
       });

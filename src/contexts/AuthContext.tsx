@@ -17,7 +17,8 @@ const discovery = {
 // Interface pour le token décodé
 interface DecodedToken {
   sub: string; // C'est l'ID de l'utilisateur
-  name: string;
+  given_name: string;
+  family_name: string;
   email: string;
   preferred_username: string;
   realm_access: {
@@ -71,6 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log("Token décodé complet:", JSON.stringify(decoded, null, 2));
         console.log("Rôles trouvés:", decoded.realm_access?.roles);
         console.log("Attributs personnalisés (si présents):", (decoded as any).app_role);
+        console.log("nom et prénom:", decoded.given_name, decoded.family_name);
         // --- CORRECTION : Vérification insensible à la casse et sécurisée ---
         // 1. Récupérer la liste des rôles (tableau vide par défaut si inexistant)
         const roles = decoded.realm_access?.roles || [];
@@ -88,7 +90,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Créer l'objet User tel que défini dans vos types
         const appUser: User = {
           id: decoded.sub,
-          name: decoded.name || decoded.preferred_username,
+          firstName: decoded.given_name || decoded.preferred_username,
+          lastName: decoded.family_name || '',
+          username: decoded.preferred_username || '',
           email: decoded.email,
           role: role,
         };

@@ -7,9 +7,10 @@ interface ButtonProps extends TouchableOpacityProps {
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
   iconStyle?: ViewStyle | ViewStyle[];
+  textStyle?: TextStyle | TextStyle[];
 }
 
-export function Button({ title, variant = 'primary', size = 'md', style, icon, iconStyle, ...props }: ButtonProps) {
+export function Button({ title, variant = 'primary', size = 'md', style, icon, iconStyle, textStyle, ...props }: ButtonProps) {
   const getButtonStyle = (): ViewStyle[] => {
     const baseStyle: ViewStyle[] = [styles.button];
     
@@ -62,7 +63,7 @@ export function Button({ title, variant = 'primary', size = 'md', style, icon, i
     <TouchableOpacity style={[getButtonStyle(), style]} {...props}>
       <View style={styles.content}>
         {icon ? <View style={[styles.iconContainer, iconStyle]}>{icon}</View> : null}
-        <Text style={getTextStyle()}>{title}</Text>
+        <Text style={[getTextStyle(), textStyle]}>{title}</Text>
       </View>
     </TouchableOpacity>
   );

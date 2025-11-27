@@ -134,7 +134,7 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
       id: `ticket_${Date.now()}`,
       eventId: ticketData.eventId,
       vendorId: currentUser.id,
-      sellerName: currentUser.name,
+      sellerName: currentUser.username,
       salePrice: ticketData.price,
       originalPrice: ticketData.originalPrice,
       section: ticketData.section,
