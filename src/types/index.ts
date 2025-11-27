@@ -7,6 +7,7 @@ export interface User {
   role: 'USER' | 'ADMIN';
   balance?: number;
   phone?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 }
 
 /** 

@@ -20,3 +20,5 @@ export { EditEventModal } from './EditEventModal';
 export { CategoryModal } from './CategoryModal';
 export { UserModal } from './UserModal';
 export { EventTickets } from './EventTickets';
+export { TransactionDetailModal } from './TransactionDetailModal';
+export { TicketDetailModal } from './TicketDetailModal';

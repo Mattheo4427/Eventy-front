@@ -7,8 +7,12 @@ import { CreateEventModal } from './CreateEventModal';
 import { EditEventModal } from './EditEventModal';
 import { CategoryModal } from './CategoryModal';
 import { UserModal } from './UserModal';
+import { TicketDetailModal } from './TicketDetailModal';
 import { Ionicons } from '@expo/vector-icons';
 import { Input } from './ui/Input';
+import { Button } from './ui/Button';
+import { stat } from 'fs';
+import { TransactionDetailModal } from './TransactionDetailModal';
 
 export function AdminPanel() {
   // Onglet actif (Ajout de 'transactions')
@@ -26,12 +30,18 @@ export function AdminPanel() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+
+  const [showTransModal, setShowTransModal] = useState(false);
+  const [selectedTrans, setSelectedTrans] = useState<Transaction | null>(null);
   
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<EventCategory | null>(null);
 
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
   // --- FILTRES TICKETS ---
   const [ticketSearch, setTicketSearch] = useState('');
@@ -174,6 +184,47 @@ export function AdminPanel() {
     Alert.alert("Supprimer", "Action irréversible.", [{ text: "Annuler" }, { text: "Supprimer", style: 'destructive', onPress: async () => { await AdminService.deleteUser(user.id); loadData(); }}]);
   };
 
+  // USERS : Gestion Suspension / Réactivation
+  const handleToggleUserStatus = (user: User) => {
+    const isSuspended = user.status === 'SUSPENDED';
+    const actionLabel = isSuspended ? "Réactiver" : "Suspendre";
+    
+    Alert.alert(
+      `${actionLabel} l'utilisateur`,
+      `Voulez-vous vraiment ${actionLabel.toLowerCase()} ${user.firstName} ${user.lastName} ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { 
+          text: actionLabel, 
+          style: isSuspended ? "default" : "destructive", // Rouge pour suspendre, Bleu pour réactiver
+          onPress: async () => {
+            try {
+              if (isSuspended) {
+                 await AdminService.reactivateUser(user.id);
+              } else {
+                 await AdminService.suspendUser(user.id);
+              }
+              loadData();
+              Alert.alert("Succès", `Utilisateur ${isSuspended ? 'réactivé' : 'suspendu'}.`);
+            } catch (error) {
+              Alert.alert("Erreur", "Une erreur est survenue.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const openTransactionDetail = (trans: Transaction) => {
+      setSelectedTrans(trans);
+      setShowTransModal(true);
+  };
+
+  const openTicketDetail = (ticket: Ticket) => {
+      setSelectedTicket(ticket);
+      setShowTicketModal(true);
+  };
+
 
   // --- RENDU ITEMS ---
 
@@ -184,7 +235,11 @@ export function AdminPanel() {
     const statusColor = statusColors[statusKey] || '#6b7280';
 
     return (
-      <View style={[styles.ticketCard, { borderLeftColor: statusColor }]}>
+      <TouchableOpacity 
+        style={[styles.ticketCard, { borderLeftColor: statusColor }]}
+        onPress={() => openTicketDetail(ticket)}
+        activeOpacity={0.7}
+      >
         <View style={styles.ticketHeader}>
           <View style={{flex: 1}}>
             <Text style={styles.ticketEventName} numberOfLines={1}>{event ? event.name : 'Événement inconnu'}</Text>
@@ -205,8 +260,9 @@ export function AdminPanel() {
             <Ionicons name="person-circle-outline" size={16} color="#6b7280" />
             <Text style={styles.sellerName}>{ticket.sellerName || 'Vendeur inconnu'}</Text>
           </View>
+          <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -261,11 +317,16 @@ export function AdminPanel() {
   const renderItem = ({ item }: { item: any }) => {
     if (activeTab === 'events') {
       return (
-        <View style={styles.row}>
-          <View style={{flex: 1}}>
-            <Text style={styles.rowTitle}>{item.name}</Text>
-            <Text style={styles.rowSubtitle}>{item.location} • {item.categoryLabel}</Text>
-            <Text style={styles.rowStatus}>{item.status}</Text>
+        <View style={styles.cardRow}>
+          <View style={styles.iconBox}>
+             <Ionicons name="calendar-outline" size={24} color="#2563eb" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>{item.name}</Text>
+            <Text style={styles.cardSubtitle}>{item.location} • {item.categoryLabel}</Text>
+            <View style={styles.miniBadge}>
+                <Text style={styles.miniBadgeText}>{item.status}</Text>
+            </View>
           </View>
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => handleEditEvent(item)} style={styles.actionButton}><Ionicons name="pencil" size={20} color="#2563eb" /></TouchableOpacity>
@@ -277,10 +338,13 @@ export function AdminPanel() {
     if (activeTab === 'categories') {
       const catId = item.categoryId || ''; 
       return (
-        <View style={styles.row}>
-          <View style={{flex: 1}}>
-            <Text style={styles.rowTitle}>{item.label}</Text>
-            <Text style={styles.rowSubtitle}>ID: {catId.length > 8 ? catId.substring(0, 8) + '...' : catId}</Text>
+        <View style={styles.cardRow}>
+          <View style={[styles.iconBox, { backgroundColor: '#f3f4f6' }]}>
+             <Ionicons name="pricetag-outline" size={24} color="#4b5563" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>{item.label}</Text>
+            <Text style={styles.cardSubtitle}>ID: {catId.length > 8 ? catId.substring(0, 8) + '...' : catId}</Text>
           </View>
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => handleEditCategory(item)} style={styles.actionButton}><Ionicons name="pencil" size={20} color="#2563eb" /></TouchableOpacity>
@@ -290,20 +354,37 @@ export function AdminPanel() {
       );
     }
     if (activeTab === 'users') {
+      const isSuspended = item.status === 'SUSPENDED';
+      const isActive = item.status === 'ACTIVE';
+      const initials = (item.firstName?.[0] || '') + (item.lastName?.[0] || '');
+      const isAdmin = item.role === 'ADMIN';
+
       return (
-        <View style={styles.row}>
-          <View style={{flex: 1}}>
-            <Text style={styles.rowTitle}>{item.firstName} {item.lastName}</Text>
-            <Text style={styles.rowSubtitle}>{item.email}</Text>
-            <View style={{ flexDirection: 'row', marginTop: 4 }}>
-              <View style={[styles.badge, item.role === 'ADMIN' ? { backgroundColor: '#fee2e2' } : { backgroundColor: '#dbeafe' }]}>
-                <Text style={[styles.badgeText, item.role === 'ADMIN' ? { color: '#dc2626' } : { color: '#2563eb' }]}>{item.role}</Text>
+        <View style={styles.cardRow}>
+          <View style={[styles.avatarBox, isAdmin ? styles.avatarAdmin : styles.avatarUser]}>
+            <Text style={[styles.avatarText, isAdmin ? styles.textAdmin : styles.textUser]}>{initials.toUpperCase()}</Text>
+          </View>
+          <View style={styles.cardContent}>
+            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                <Text style={styles.cardTitle}>{item.firstName} {item.lastName}</Text>
+                {isAdmin && <Ionicons name="shield-checkmark" size={14} color="#dc2626" />}
+            </View>
+            <Text style={styles.cardSubtitle}>{item.email}</Text>
+            <View style={{ flexDirection: 'row', marginTop: 6, gap: 6 }}>
+              <View style={[styles.badge, item.status === 'ACTIVE' ? { backgroundColor: '#d1fae5' } : item.status === 'INACTIVE' ? { backgroundColor: '#fee2e2' } : { backgroundColor: '#fef3c7' }]}>
+                <Text style={[styles.badgeText, item.status === 'ACTIVE' ? { color: '#059669' } : item.status === 'INACTIVE' ? { color: '#dc2626' } : item.status === 'SUSPENDED' ? { color: '#b45309' } : {}]}>{item.status}</Text>
               </View>
             </View>
           </View>
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => handleEditUser(item)} style={styles.actionButton}><Ionicons name="pencil" size={20} color="#2563eb" /></TouchableOpacity>
-            <TouchableOpacity onPress={() => handleSuspendUser(item)} style={styles.actionButton}><Ionicons name="ban-outline" size={20} color="#f59e0b" /></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleToggleUserStatus(item)} style={styles.actionButton}>
+                          <Ionicons 
+                            name={isSuspended ? "play-outline" : "ban-outline"} 
+                            size={20} 
+                            color={isSuspended ? "#10b981" : "#f59e0b"} 
+                          />
+            </TouchableOpacity>            
             <TouchableOpacity onPress={() => handleDeleteUser(item)} style={styles.actionButton}><Ionicons name="trash" size={20} color="#ef4444" /></TouchableOpacity>
           </View>
         </View>
@@ -314,7 +395,33 @@ export function AdminPanel() {
     }
     // AJOUT
     if (activeTab === 'transactions') {
-        return renderTransactionItem(item);
+        const statusColors: any = { 'COMPLETED': '#10b981', 'PENDING': '#f59e0b', 'FAILED': '#ef4444', 'REFUNDED': '#6366f1' };
+        const color = statusColors[item.status] || '#6b7280';
+        const buyer = users.find(u => u.id === item.buyerId);
+
+        return (
+          <TouchableOpacity 
+            style={[styles.transCard, { borderLeftColor: color }]} 
+            onPress={() => openTransactionDetail(item)}
+            activeOpacity={0.7}
+          >
+             <View style={styles.transRow}>
+                 <View style={[styles.transIconContainer, { backgroundColor: color + '15' }]}>
+                     <Ionicons name={item.status === 'COMPLETED' ? "checkmark" : "time"} size={20} color={color} />
+                 </View>
+                 <View style={{flex: 1, marginLeft: 12}}>
+                     <Text style={styles.transTitle}>Transaction</Text>
+                     <Text style={styles.transSubtitle}>{new Date(item.transactionDate).toLocaleDateString()}</Text>
+                     <Text style={styles.transBuyer}>Acheteur: {buyer ? buyer.firstName : '...'}</Text>
+                 </View>
+                 <View style={{alignItems: 'flex-end'}}>
+                     <Text style={[styles.transAmount, { color: color }]}>{item.totalAmount ? item.totalAmount.toFixed(2) : ''} €</Text>
+                     <Text style={[styles.statusTextMini, { color: color }]}>{item.status}</Text>
+                 </View>
+                 <Ionicons name="chevron-forward" size={16} color="#9ca3af" style={{marginLeft: 8}} />
+             </View>
+          </TouchableOpacity>
+        );
     }
     return null;
   };
@@ -345,7 +452,7 @@ export function AdminPanel() {
         <View style={styles.filterSection}>
           <Input placeholder="Rechercher..." value={ticketSearch} onChangeText={setTicketSearch} style={styles.searchBar} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
-            {['ALL', 'AVAILABLE', 'SOLD', 'PENDING', 'CANCELED'].map((status) => (
+            {['ALL', 'AVAILABLE', 'SOLD', 'CANCELED'].map((status) => (
                 <TouchableOpacity key={status} style={[styles.chip, ticketStatusFilter === status && styles.chipActive]} onPress={() => setTicketStatusFilter(status)}>
                     <Text style={[styles.chipText, ticketStatusFilter === status && styles.chipTextActive]}>{status}</Text>
                 </TouchableOpacity>
@@ -369,9 +476,9 @@ export function AdminPanel() {
       )}
 
       {/* Boutons d'ajout */}
-      {activeTab === 'events' && <TouchableOpacity style={styles.addButton} onPress={() => setShowCreateModal(true)}><Text style={styles.addButtonText}>+ Événement</Text></TouchableOpacity>}
-      {activeTab === 'categories' && <TouchableOpacity style={styles.addButton} onPress={openCreateCategory}><Text style={styles.addButtonText}>+ Catégorie</Text></TouchableOpacity>}
-      {activeTab === 'users' && <TouchableOpacity style={styles.addButton} onPress={openCreateUser}><Text style={styles.addButtonText}>+ Utilisateur</Text></TouchableOpacity>}
+      {activeTab === 'events' && <Button title="+ Événement" onPress={() => setShowCreateModal(true)} style={styles.addButton} />}
+      {activeTab === 'categories' && <Button title="+ Catégorie" onPress={openCreateCategory} style={styles.addButton} />}
+      {activeTab === 'users' && <Button title="+ Utilisateur" onPress={openCreateUser} style={styles.addButton} />}
 
       {/* Liste */}
       <FlatList
@@ -387,29 +494,55 @@ export function AdminPanel() {
       <EditEventModal visible={showEditModal} event={selectedEvent} onClose={() => { setShowEditModal(false); setSelectedEvent(null); }} onSuccess={loadData} />
       <CategoryModal visible={showCategoryModal} categoryToEdit={selectedCategory} onClose={() => { setShowCategoryModal(false); setSelectedCategory(null); }} onSuccess={loadData} />
       <UserModal visible={showUserModal} userToEdit={selectedUser} onClose={() => { setShowUserModal(false); setSelectedUser(null); }} onSuccess={loadData} />
+      <TransactionDetailModal 
+        visible={showTransModal}
+        transaction={selectedTrans}
+        buyer={selectedTrans ? users.find(u => u.id === selectedTrans.buyerId) : undefined}
+        onClose={() => setShowTransModal(false)}
+      />
+      <TicketDetailModal 
+        visible={showTicketModal}
+        ticket={selectedTicket}
+        event={selectedTicket ? events.find(e => e.id === selectedTicket.eventId) : undefined}
+        onClose={() => setShowTicketModal(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f9fafb' },
-  headerTitle: { fontSize: 28, fontWeight: 'bold', marginBottom: 16, color: '#111827' },
+  headerTitle: { fontSize: 30, fontWeight: '800', marginBottom: 18, color: '#0f172a' },
   tabsScrollView: { marginBottom: 16, maxHeight: 50 },
-  tabsContainer: { backgroundColor: '#e5e7eb', borderRadius: 8, padding: 4, height: 44, alignItems: 'center' },
-  tab: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 6, marginRight: 4, justifyContent: 'center' },
-  activeTab: { backgroundColor: 'white', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 },
-  tabText: { fontWeight: '600', color: '#6b7280', fontSize: 14 },
-  activeTabText: { color: '#111827' },
-  addButton: { backgroundColor: '#2563eb', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 16 },
+  tabsContainer: { backgroundColor: '#eef2ff', borderRadius: 12, padding: 6, height: 48, alignItems: 'center' },
+  tab: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 999, marginRight: 8, justifyContent: 'center', backgroundColor: 'transparent' },
+  activeTab: { backgroundColor: '#2563eb', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 },
+  tabText: { fontWeight: '600', color: '#475569', fontSize: 14 },
+  activeTabText: { color: 'white' },
+  addButton: { backgroundColor: '#2563eb', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginBottom: 16, width: 160 },
   addButtonText: { color: 'white', fontWeight: 'bold' },
   list: { paddingBottom: 40 },
-  row: { flexDirection: 'row', padding: 16, backgroundColor: 'white', marginBottom: 8, borderRadius: 8, alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
-  rowTitle: { fontWeight: 'bold', fontSize: 16, color: '#1f2937' },
-  rowSubtitle: { color: '#6b7280', marginTop: 2 },
-  rowStatus: { fontSize: 12, color: '#9ca3af', marginTop: 4, textTransform: 'uppercase' },
-  actions: { flexDirection: 'row', gap: 10 },
-  actionButton: { padding: 8 },
-  emptyText: { textAlign: 'center', color: '#9ca3af', marginTop: 20 },
+  
+  // New Card Styles
+  cardRow: { flexDirection: 'row', padding: 16, backgroundColor: 'white', marginBottom: 10, borderRadius: 16, alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, borderLeftWidth: 4, borderLeftColor: 'transparent' },
+  iconBox: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  cardContent: { flex: 1, justifyContent: 'center' },
+  cardTitle: { fontWeight: '700', fontSize: 16, color: '#1f2937', marginBottom: 4 },
+  cardSubtitle: { color: '#6b7280', fontSize: 13 },
+  miniBadge: { alignSelf: 'flex-start', backgroundColor: '#f3f4f6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 6 },
+  miniBadgeText: { fontSize: 10, fontWeight: '600', color: '#4b5563', textTransform: 'uppercase' },
+
+  // Avatar Styles
+  avatarBox: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  avatarAdmin: { backgroundColor: '#fee2e2' },
+  avatarUser: { backgroundColor: '#dbeafe' },
+  avatarText: { fontSize: 18, fontWeight: 'bold' },
+  textAdmin: { color: '#dc2626' },
+  textUser: { color: '#2563eb' },
+
+  actions: { flexDirection: 'row', gap: 8 },
+  actionButton: { padding: 8, backgroundColor: '#f9fafb', borderRadius: 8 },
+  emptyText: { textAlign: 'center', color: '#9ca3af', marginTop: 28, padding: 24, backgroundColor: '#fff', borderRadius: 12 },
   badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, alignSelf: 'flex-start' },
   badgeText: { fontSize: 10, fontWeight: 'bold' },
 
@@ -452,4 +585,5 @@ const styles = StyleSheet.create({
   transSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   transBuyer: { fontSize: 12, color: '#4b5563', marginTop: 4 },
   transAmount: { fontSize: 16, fontWeight: 'bold', textAlign: 'right' },
+  statusTextMini: { fontSize: 10, fontWeight: 'bold', textAlign: 'right', marginTop: 2 },
 });

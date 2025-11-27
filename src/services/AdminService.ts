@@ -100,6 +100,11 @@ export const AdminService = {
     await api.post(`/users/admin/users/${userId}/suspend`);
   },
 
+  reactivateUser: async (userId: string): Promise<void> => {
+    // Endpoint Backend: POST /users/admin/users/{id}/reactivate
+    await api.post(`/users/admin/users/${userId}/unsuspend`);
+  },
+
   /**
    * Crée un nouvel utilisateur (Admin ou Standard)
    */

@@ -112,10 +112,26 @@ export function BuyTicketModal({ visible, ticket, event, onClose, onSuccess }: B
                     {ticket.section ? `Sec ${ticket.section}` : ''} {ticket.row ? `Rg ${ticket.row}` : ''}
                 </Text>
             </View>
+
+            {/* Affichage du prix initial si réduction */}
+            {ticket.originalPrice > ticket.salePrice && (
+                <View style={styles.row}>
+                    <Text style={styles.label}>Prix initial</Text>
+                    <Text style={[styles.value, styles.strikethrough]}>{ticket.originalPrice.toFixed(2)} €</Text>
+                </View>
+            )}
+
             <View style={styles.divider} />
             <View style={styles.row}>
                 <Text style={styles.totalLabel}>Total à payer</Text>
-                <Text style={styles.totalPrice}>{ticket.salePrice.toFixed(2)} €</Text>
+                <View style={{alignItems: 'flex-end'}}>
+                    <Text style={styles.totalPrice}>{ticket.salePrice.toFixed(2)} €</Text>
+                    {ticket.originalPrice > ticket.salePrice && (
+                        <Text style={styles.savingsText}>
+                            Vous économisez {(ticket.originalPrice - ticket.salePrice).toFixed(2)} €
+                        </Text>
+                    )}
+                </View>
             </View>
           </View>
 
@@ -173,6 +189,8 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 12 },
   totalLabel: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   totalPrice: { fontSize: 24, fontWeight: 'bold', color: '#2563eb' },
+  strikethrough: { textDecorationLine: 'line-through', color: '#9ca3af' },
+  savingsText: { fontSize: 12, color: '#10b981', fontWeight: '600', marginTop: 2 },
 
   footer: { marginTop: 'auto' },
   payButton: { width: '100%', borderRadius: 12, height: 50 }

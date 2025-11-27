@@ -81,5 +81,10 @@ export const TicketService = {
     // Pour l'instant, on va utiliser un endpoint fictif ou filtrer getAll
     const response = await api.get<Ticket[]>(`/tickets/vendeur/${id}`);
     return response.data;
+  },
+
+  getTicketById: async (id: string): Promise<Ticket> => {
+    const response = await api.get<Ticket>(`/tickets/${id}`);
+    return response.data;
   }
 };
