@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Event, EventCategory, Ticket, User } from '../types';
+import { Event, EventCategory, Ticket, User, Transaction } from '../types';
 import { apiConfig } from '../config';
 import * as SecureStore from 'expo-secure-store'; // Import nécessaire pour récupérer le token
 
@@ -135,10 +135,10 @@ export const AdminService = {
     await api.delete(`/users/admin/users/${userId}`);
   },
 
-  getAllTransactions: async (): Promise<any[]> => {
+  getAllTransactions: async (): Promise<Transaction[]> => {
     // Appel vers Transactions Service via Gateway
     // Endpoint Backend: GET /transactions/admin/all
-    const response = await api.get<any[]>('/transactions/admin/all');
+    const response = await api.get<Transaction[]>('/transactions/admin/all');
     return response.data;
   }
 };

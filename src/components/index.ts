@@ -5,6 +5,7 @@ export { EventList } from './EventList';
 export { EventDetail } from './EventDetail';
 export { UserProfile } from './UserProfile';
 export { AdminPanel } from './AdminPanel';
+export { AdminDashboard } from './AdminDashboard';
 export { LoginModal } from './LoginModal';
 export { BuyTicketModal } from './BuyTicketModal';
 export { SellTicketModal } from './SellTicketModal';

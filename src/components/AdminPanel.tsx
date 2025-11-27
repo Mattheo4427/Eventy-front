@@ -53,6 +53,10 @@ export function AdminPanel() {
   const [transSearch, setTransSearch] = useState('');
   const [transStatusFilter, setTransStatusFilter] = useState<string>('ALL');
 
+  // --- AJOUT : FILTRES USERS ---
+  const [userSearch, setUserSearch] = useState('');
+  const [userStatusFilter, setUserStatusFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
+
   // --- CHARGEMENT DES DONNÉES ---
   const loadData = async () => {
     try {
@@ -161,6 +165,28 @@ export function AdminPanel() {
         setData(result);
     }
   }, [transactions, transSearch, transStatusFilter, activeTab]);
+
+  // --- AJOUT : FILTRAGE USERS ---
+  useEffect(() => {
+    if (activeTab === 'users') {
+      let result = users;
+
+      if (userSearch) {
+        const lower = userSearch.toLowerCase();
+        result = result.filter(u => 
+          (u.firstName && u.firstName.toLowerCase().includes(lower)) || 
+          (u.lastName && u.lastName.toLowerCase().includes(lower)) || 
+          (u.email && u.email.toLowerCase().includes(lower))
+        );
+      }
+
+      if (userStatusFilter !== 'ALL') {
+        result = result.filter(u => u.status === userStatusFilter);
+      }
+
+      setData(result);
+    }
+  }, [users, userSearch, userStatusFilter, activeTab]);
 
 
   // --- HANDLERS ACTIONS ---
@@ -469,6 +495,20 @@ export function AdminPanel() {
             {['ALL', 'COMPLETED', 'PENDING', 'FAILED', 'REFUNDED'].map((status) => (
                 <TouchableOpacity key={status} style={[styles.chip, transStatusFilter === status && styles.chipActive]} onPress={() => setTransStatusFilter(status)}>
                     <Text style={[styles.chipText, transStatusFilter === status && styles.chipTextActive]}>{status}</Text>
+                </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Zone Filtres (Users) */}
+      {activeTab === 'users' && (
+        <View style={styles.filterSection}>
+          <Input placeholder="Rechercher un utilisateur..." value={userSearch} onChangeText={setUserSearch} style={styles.searchBar} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
+            {['ALL', 'ACTIVE', 'SUSPENDED'].map((status) => (
+                <TouchableOpacity key={status} style={[styles.chip, userStatusFilter === status && styles.chipActive]} onPress={() => setUserStatusFilter(status as any)}>
+                    <Text style={[styles.chipText, userStatusFilter === status && styles.chipTextActive]}>{status}</Text>
                 </TouchableOpacity>
             ))}
           </ScrollView>

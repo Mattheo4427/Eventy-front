@@ -7,6 +7,7 @@ import {
   EventDetail,
   UserProfile,
   AdminPanel,
+  AdminDashboard,
   SellTicketModal,
   BuyTicketModal,
   LoginModal,
@@ -52,11 +53,11 @@ export default function AppContent() {
   // ====================
   useEffect(() => {
     if (currentUser?.role === 'ADMIN') {
-      setCurrentView('admin');
+      setCurrentView('admin-dashboard');
     }
   }, [currentUser]);
   
-const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail' | 'event-tickets' | 'profile' | 'admin' | 'notifications' | 'messages'>('home');
+const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail' | 'event-tickets' | 'profile' | 'admin' | 'admin-dashboard' | 'notifications' | 'messages'>('home');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [showSellModal, setShowSellModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
@@ -368,13 +369,7 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
           return null;
         }
         return (
-          <UserProfile 
-            user={currentUser}
-            tickets={tickets.filter(t => t.vendorId === currentUser.id)}
-            events={events}
-            // @ts-ignore
-            onReportUser={(userId: string, userName: string) => openReportModal('user', userId, userName)}
-          />
+          <UserProfile />
         );
       case 'admin':
         if (!currentUser || currentUser.role !== 'ADMIN') {
@@ -387,6 +382,12 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
             // Sinon, adaptez selon votre implémentation de AdminPanel
           />
         );
+      case 'admin-dashboard':
+        if (!currentUser || currentUser.role !== 'ADMIN') {
+          setCurrentView('home');
+          return null;
+        }
+        return <AdminDashboard />;
       default:
         return null;
     }

@@ -10,7 +10,7 @@ interface HeaderProps {
   currentUser: User | null;
   onLogin: () => void;
   onLogout: () => void;
-  onNavigate: (view: 'home' | 'events' | 'profile' | 'admin') => void;
+  onNavigate: (view: 'home' | 'events' | 'profile' | 'admin' | 'admin-dashboard') => void;
   currentView: string;
   notificationCount?: number;
   messageCount?: number;
@@ -34,7 +34,7 @@ export function Header({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { t } = useTranslation();
 
-  const handleNavigate = (view: 'home' | 'events' | 'profile' | 'admin') => {
+  const handleNavigate = (view: 'home' | 'events' | 'profile' | 'admin' | 'admin-dashboard') => {
     onNavigate(view);
     setIsDrawerOpen(false);
   };
@@ -167,12 +167,20 @@ export function Header({
                 )}
                 
                 {currentUser?.role === 'ADMIN' && (
-                  <NavigationItem
-                    title={t('administration', { ns: 'navigation' })}
-                    onPress={() => handleNavigate('admin')}
-                    isActive={currentView === 'admin'}
-                    icon="settings-outline"
-                  />
+                  <>
+                    <NavigationItem
+                      title={t('administration', { ns: 'navigation' })}
+                      onPress={() => handleNavigate('admin')}
+                      isActive={currentView === 'admin'}
+                      icon="settings-outline"
+                    />
+                    <NavigationItem
+                      title="Tableau de bord"
+                      onPress={() => handleNavigate('admin-dashboard')}
+                      isActive={currentView === 'admin-dashboard'}
+                      icon="stats-chart-outline"
+                    />
+                  </>
                 )}
               </View>
 

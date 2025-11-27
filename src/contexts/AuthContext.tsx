@@ -12,6 +12,7 @@ WebBrowser.maybeCompleteAuthSession();
 const discovery = {
   authorizationEndpoint: `${keycloakConfig.baseUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/auth`,
   tokenEndpoint: `${keycloakConfig.baseUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/token`,
+  endSessionEndpoint: `${keycloakConfig.baseUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/logout`,
 };
 
 // Interface pour le token décodé
@@ -193,8 +194,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout: async () => {
       // Efface l'état et le token en mémoire
       await setAuthState(null);
-      // Optionnel : Déconnecter aussi de Keycloak (nécessite le token d'ID et une config)
-      // WebBrowser.openBrowserAsync(`${discovery.authorizationEndpoint}/logout?...`);
+      try {
+        const redirectUrl = makeRedirectUri({ native: appSchema });
+        await WebBrowser.openAuthSessionAsync(
+          `${discovery.endSessionEndpoint}?client_id=${keycloakConfig.clientId}&redirect_uri=${redirectUrl}`,
+          redirectUrl
+        );
+      } catch (e) {
+        console.error("Erreur lors de la déconnexion Keycloak:", e);
+      }
     },
   };
 
