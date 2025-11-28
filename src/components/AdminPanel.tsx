@@ -539,6 +539,7 @@ export function AdminPanel() {
         transaction={selectedTrans}
         buyer={selectedTrans ? users.find(u => u.id === selectedTrans.buyerId) : undefined}
         onClose={() => setShowTransModal(false)}
+        onSuccess={loadData}
       />
       <TicketDetailModal 
         visible={showTicketModal}

@@ -1,18 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Transaction, User } from '../types';
 import { Button } from './ui/Button';
+import { AdminService } from '../services/AdminService';
 
 interface TransactionDetailModalProps {
   visible: boolean;
   transaction: (Transaction & { isSale?: boolean }) | null;
   buyer?: User;
   onClose: () => void;
+  onSuccess?: () => void; // Callback pour rafraîchir
   mode?: 'admin' | 'user';
 }
 
-export function TransactionDetailModal({ visible, transaction, buyer, onClose, mode = 'admin' }: TransactionDetailModalProps) {
+export function TransactionDetailModal({ visible, transaction, buyer, onClose, onSuccess, mode = 'admin' }: TransactionDetailModalProps) {
   if (!transaction) return null;
 
   const isSale = transaction.isSale;
@@ -37,6 +39,26 @@ export function TransactionDetailModal({ visible, transaction, buyer, onClose, m
   };
 
   const statusColor = getStatusColor(transaction.status);
+
+  const handleRefund = () => {
+    Alert.alert(
+      "Remboursement",
+      "Cette action est irréversible. L'acheteur sera crédité via Stripe et le vendeur débité.",
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Confirmer", style: "destructive", onPress: async () => {
+            try {
+                await AdminService.refundTransaction(transaction.id);
+                Alert.alert("Succès", "Remboursement effectué.");
+                if (onSuccess) onSuccess();
+                onClose(); 
+            } catch (e) {
+                Alert.alert("Erreur", "Échec du remboursement.");
+            }
+        }}
+      ]
+    );
+  };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -139,6 +161,21 @@ export function TransactionDetailModal({ visible, transaction, buyer, onClose, m
                   </View>
                 </>
               )}
+            </View>
+          )}
+
+          {/* Actions Admin - Remboursement */}
+          {mode === 'admin' && transaction.status === 'COMPLETED' && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: '#ef4444' }]}>Zone de Danger</Text>
+              <Button 
+                title="Rembourser la transaction" 
+                onPress={handleRefund} 
+                variant="outline" 
+                style={{ borderColor: '#ef4444' }}
+                textStyle={{ color: '#ef4444' }}
+                icon={<Ionicons name="alert-circle-outline" size={20} color="#ef4444" />}
+              />
             </View>
           )}
           

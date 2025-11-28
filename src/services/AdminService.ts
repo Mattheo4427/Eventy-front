@@ -140,5 +140,8 @@ export const AdminService = {
     // Endpoint Backend: GET /transactions/admin/all
     const response = await api.get<Transaction[]>('/transactions/admin/all');
     return response.data;
-  }
+  },
+  refundTransaction: async (transactionId: string): Promise<void> => {
+    await api.post(`/transactions/admin/${transactionId}/refund`);
+  },
 };
