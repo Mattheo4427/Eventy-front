@@ -6,7 +6,7 @@ import { Button } from './ui/Button';
 
 interface TransactionDetailModalProps {
   visible: boolean;
-  transaction: Transaction | null;
+  transaction: (Transaction & { isSale?: boolean }) | null;
   buyer?: User;
   onClose: () => void;
   mode?: 'admin' | 'user';
@@ -14,6 +14,10 @@ interface TransactionDetailModalProps {
 
 export function TransactionDetailModal({ visible, transaction, buyer, onClose, mode = 'admin' }: TransactionDetailModalProps) {
   if (!transaction) return null;
+
+  const isSale = transaction.isSale;
+  const displayAmount = isSale ? transaction.vendorAmount : transaction.totalAmount;
+  const displayLabel = isSale ? "Montant Net Vendeur" : "Montant Total";
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('fr-FR', {
@@ -57,22 +61,27 @@ export function TransactionDetailModal({ visible, transaction, buyer, onClose, m
 
           {/* Montant Principal */}
           <View style={styles.amountContainer}>
-            <Text style={styles.amountLabel}>Montant Total</Text>
-            <Text style={[styles.amountValue, { color: statusColor }]}>{transaction.totalAmount?.toFixed(2) ?? 'N/A'} €</Text>
+            <Text style={styles.amountLabel}>{displayLabel}</Text>
+            <Text style={[styles.amountValue, { color: statusColor }]}>{displayAmount?.toFixed(2) ?? 'N/A'} €</Text>
           </View>
 
           {/* Détails Financiers */}
-          {mode === 'admin' && (
+          {(mode === 'admin' || isSale) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Récapitulatif</Text>
               <View style={styles.row}>
-                <Text style={styles.label}>Net Vendeur</Text>
-                <Text style={styles.value}>{transaction.vendorAmount?.toFixed(2) ?? 'N/A'} €</Text>
+                <Text style={styles.label}>Prix Payé (Acheteur)</Text>
+                <Text style={styles.value}>{transaction.totalAmount?.toFixed(2) ?? 'N/A'} €</Text>
               </View>
               <View style={styles.divider} />
               <View style={styles.row}>
                 <Text style={styles.label}>Commission Plateforme</Text>
                 <Text style={styles.value}>{transaction.platformFee?.toFixed(2) ?? 'N/A'} €</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.row}>
+                <Text style={styles.label}>Net Vendeur</Text>
+                <Text style={[styles.value, { fontWeight: 'bold', color: '#10b981' }]}>{transaction.vendorAmount?.toFixed(2) ?? 'N/A'} €</Text>
               </View>
             </View>
           )}

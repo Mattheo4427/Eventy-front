@@ -51,6 +51,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     borderRadius: 8,
+    color: '#111827', // Force text color for Dark Mode
   },
   default: {
     backgroundColor: '#f3f4f6',

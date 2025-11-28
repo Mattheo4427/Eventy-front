@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Event, Ticket } from '../types';
 import { Button } from './ui/Button';
@@ -21,6 +21,7 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
   const [event, setEvent] = useState<Event | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Filtres et Tri
   const [sortBy, setSortBy] = useState<'asc' | 'desc'>('asc');
@@ -30,9 +31,9 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const [eventData, ticketsData, ticketTypes] = await Promise.all([
         EventService.getEventById(eventId),
         EventService.getEventTickets(eventId),
@@ -62,12 +63,18 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
       console.error("Erreur chargement tickets:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
     loadData();
   }, [eventId]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData(false);
+  };
 
   const handleBuyClick = (ticket: Ticket) => {
     if (!isAuthenticated) {
@@ -126,7 +133,13 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
+        }
+      >
         <View style={styles.titleContainer}>
           <Text style={styles.pageTitle}>
             {t('eventDetail.availableTickets', { defaultValue: 'Billets disponibles' })}
@@ -228,7 +241,7 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
             }}
             onSuccess={() => {
                 // Rafraîchir la liste pour que le billet vendu disparaisse
-                loadData();
+                loadData(false);
             }}
         />
       )}

@@ -69,5 +69,23 @@ export const TransactionService = {
   getMyHistory: async (): Promise<Transaction[]> => {
     const response = await api.get<Transaction[]>('/transactions/history');
     return response.data;
+  },
+  getMySales: async (): Promise<Transaction[]> => {
+    const response = await api.get<Transaction[]>('/transactions/sales');
+    return response.data;
+  },
+  cancelTransaction: async (transactionId: string): Promise<void> => {
+    try {
+      await api.post(`/transactions/${transactionId}/cancel`);
+    } catch (error) {
+      console.warn("Erreur lors de l'annulation de la transaction (peut déjà être annulée)", error);
+    }
+  },
+  failTransaction: async (transactionId: string): Promise<void> => {
+    try {
+      await api.post(`/transactions/${transactionId}/fail`);
+    } catch (error) {
+      console.warn("Erreur lors du signalement de l'échec transaction", error);
+    }
   }
 };

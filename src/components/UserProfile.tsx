@@ -20,12 +20,14 @@ export function UserProfile() {
   const [ticketTab, setTicketTab] = useState<'owned' | 'selling'>('owned');
 
   // Data lists
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<(Transaction & { isSale?: boolean })[]>([]);
   const [myTickets, setMyTickets] = useState<Ticket[]>([]); // Tickets I am selling
   const [ownedTickets, setOwnedTickets] = useState<Ticket[]>([]); // Tickets I bought
 
   // Filters
-  const [transactionFilter, setTransactionFilter] = useState<'ALL' | 'COMPLETED' | 'PENDING'>('ALL');
+  const [transactionFilter, setTransactionFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELED' | 'REFUNDED'>('ALL');
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState<'ALL' | 'PURCHASE' | 'SALE'>('ALL');
+  const [transactionSort, setTransactionSort] = useState<'DATE_DESC' | 'DATE_ASC' | 'PRICE_DESC' | 'PRICE_ASC'>('DATE_DESC');
   const [sellingFilter, setSellingFilter] = useState<'ALL' | 'AVAILABLE' | 'SOLD'>('ALL');
 
   // Modals
@@ -66,26 +68,34 @@ export function UserProfile() {
 
       // 2. Récupérer l'historique des transactions (Achats)
       const history = await TransactionService.getMyHistory();
-      // Deduplicate transactions just in case
-      const uniqueHistory = Array.from(new Map(history.map(item => [item.id, item])).values());
-      setTransactions(uniqueHistory);
+      const purchases = history.map(t => ({ ...t, isSale: false }));
 
-      // 3. Récupérer les tickets achetés (via les transactions)
-      // On récupère les détails de chaque ticket acheté
-      const ownedPromises = uniqueHistory
+      // 3. Récupérer les ventes réelles
+      const salesHistory = await TransactionService.getMySales();
+      const sales = salesHistory.map(t => ({ ...t, isSale: true }));
+
+      // 4. Récupérer les tickets achetés (via les transactions)
+      const ownedPromises = history
         .filter(tx => tx.status === 'COMPLETED')
         .map(tx => TicketService.getTicketById(tx.ticketId).catch(e => null));
       
       const owned = (await Promise.all(ownedPromises)).filter((t): t is Ticket => t !== null);
-      // Deduplicate owned tickets (in case multiple transactions point to same ticket)
       const uniqueOwned = Array.from(new Map(owned.map(item => [item.id, item])).values());
       setOwnedTickets(uniqueOwned);
 
-      // 4. Récupérer les tickets mis en vente par cet user
+      // 5. Récupérer les tickets mis en vente par cet user
       const tickets = await TicketService.getMyTickets(authUser.id);
-      // Deduplicate my tickets
       const uniqueMyTickets = Array.from(new Map(tickets.map(item => [item.id, item])).values());
       setMyTickets(uniqueMyTickets);
+
+      // Fusionner et trier par date
+      const allTransactions = [...purchases, ...sales].sort((a, b) => 
+        new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()
+      );
+      
+      // Deduplicate
+      const uniqueTransactions = Array.from(new Map(allTransactions.map(item => [item.id, item])).values());
+      setTransactions(uniqueTransactions);
 
     } catch (error) {
       console.error("Erreur chargement profil", error);
@@ -128,46 +138,93 @@ export function UserProfile() {
     setShowTransactionModal(true);
   };
 
-  const renderTicketItem = ({ item }: { item: Ticket }) => (
+  const renderTicketItem = ({ item, mode }: { item: Ticket, mode: 'owned' | 'selling' }) => (
     <TouchableOpacity onPress={() => handleTicketPress(item)} activeOpacity={0.7}>
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-            <Ionicons name="ticket-outline" size={20} color="#4b5563" />
-            <Text style={styles.cardTitle}>Ticket #{item.id.substring(0, 8)}</Text>
-          </View>
-          <View style={[styles.badge, 
-            item.status === 'SOLD' ? styles.bgGreen : 
-            item.status === 'AVAILABLE' ? styles.bgBlue : styles.bgGray
-          ]}>
-            <Text style={[styles.badgeText, 
-              item.status === 'SOLD' ? {color: '#065f46'} : 
-              item.status === 'AVAILABLE' ? {color: '#1e40af'} : {color: '#374151'}
-            ]}>{item.status}</Text>
-          </View>
-        </View>
-        <View style={styles.cardBody}>
-            <Text style={styles.cardSubtitle}>Prix: {item.salePrice}€</Text>
-            {item.ticketTypeLabel && <Text style={styles.cardDetail}>• {item.ticketTypeLabel}</Text>}
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+            <View style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}>
+                <View style={{
+                    width: 48, height: 48, borderRadius: 12, 
+                    backgroundColor: mode === 'owned' ? '#eff6ff' : '#f0fdf4', 
+                    justifyContent: 'center', alignItems: 'center'
+                }}>
+                    <Ionicons name="ticket" size={24} color={mode === 'owned' ? '#2563eb' : '#16a34a'} />
+                </View>
+                <View>
+                    <Text style={styles.cardTitle}>Ticket #{item.id.substring(0, 8)}</Text>
+                    <Text style={styles.cardSubtitle}>
+                        {item.ticketTypeLabel || 'Standard'} • {item.salePrice}€
+                    </Text>
+                    {mode === 'selling' && item.creationDate && (
+                        <Text style={[styles.cardDetail, {marginLeft: 0, fontSize: 11}]}>
+                            Mis en vente le {new Date(item.creationDate).toLocaleDateString()}
+                        </Text>
+                    )}
+                </View>
+            </View>
+            
+            {mode === 'selling' && (
+                <View style={[styles.badge, 
+                    item.status === 'SOLD' ? styles.bgGreen : 
+                    item.status === 'AVAILABLE' ? styles.bgBlue : styles.bgGray
+                ]}>
+                    <Text style={[styles.badgeText, 
+                    item.status === 'SOLD' ? {color: '#065f46'} : 
+                    item.status === 'AVAILABLE' ? {color: '#1e40af'} : {color: '#374151'}
+                    ]}>{item.status}</Text>
+                </View>
+            )}
+             {mode === 'owned' && (
+                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            )}
         </View>
       </View>
     </TouchableOpacity>
   );
 
-  const renderTransactionItem = ({ item }: { item: Transaction }) => (
+  const renderTransactionItem = ({ item }: { item: Transaction & { isSale?: boolean } }) => {
+    const isSale = item.isSale;
+    const amount = isSale ? item.vendorAmount : item.totalAmount;
+    const color = isSale ? '#10b981' : '#ef4444';
+    const icon = isSale ? 'arrow-up-circle' : 'arrow-down-circle';
+    const label = isSale ? 'Vente' : 'Achat';
+    const sign = isSale ? '+' : '-';
+
+    return (
     <TouchableOpacity onPress={() => handleTransactionPress(item)} activeOpacity={0.7}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-            <Ionicons name={item.status === 'COMPLETED' ? "checkmark-circle" : "time"} size={20} color={item.status === 'COMPLETED' ? "#10b981" : "#f59e0b"} />
-            <Text style={styles.cardTitle}>{new Date(item.transactionDate).toLocaleDateString()}</Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
+            <View style={{
+                width: 40, height: 40, borderRadius: 20, 
+                backgroundColor: isSale ? '#dcfce7' : '#fee2e2',
+                justifyContent: 'center', alignItems: 'center'
+            }}>
+                <Ionicons name={icon} size={24} color={color} />
+            </View>
+            <View>
+                <Text style={styles.cardTitle}>{label}</Text>
+                <Text style={styles.cardSubtitle}>{new Date(item.transactionDate).toLocaleDateString()}</Text>
+            </View>
           </View>
-          <Text style={styles.priceText}>-{item.totalAmount}€</Text>
+          <View style={{alignItems: 'flex-end'}}>
+            <Text style={[styles.priceText, { color }]}>{sign}{amount.toFixed(2)}€</Text>
+            <View style={[styles.badge, {
+                marginTop: 4,
+                backgroundColor: item.status === 'COMPLETED' ? '#f0fdf4' : '#fffbeb'
+            }]}>
+                <Text style={[styles.badgeText, {
+                    fontSize: 10,
+                    color: item.status === 'COMPLETED' ? '#15803d' : '#b45309'
+                }]}>{item.status}</Text>
+            </View>
+          </View>
         </View>
-        <Text style={styles.cardSubtitle}>ID: {item.id.substring(0, 8)} • {item.status}</Text>
+        <Text style={[styles.cardDetail, {marginTop: 0}]}>ID: {item.id.substring(0, 8)}</Text>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   if (loading) return <ActivityIndicator size="large" color="#2563eb" style={{marginTop: 50}} />;
   if (!user) return <Text>Utilisateur non trouvé</Text>;
@@ -303,15 +360,59 @@ export function UserProfile() {
             
             <View style={{marginBottom: 16}}>
                 <Text style={styles.subHeader}>Historique des transactions</Text>
+                
+                {/* Type Filter */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop: 8}}>
-                    {(['ALL', 'COMPLETED', 'PENDING'] as const).map(f => (
+                    <Text style={{alignSelf:'center', marginRight: 8, fontSize: 12, color: '#6b7280'}}>Type:</Text>
+                    {(['ALL', 'PURCHASE', 'SALE'] as const).map(f => (
+                        <TouchableOpacity 
+                            key={f} 
+                            onPress={() => setTransactionTypeFilter(f)}
+                            style={[styles.filterChip, transactionTypeFilter === f && styles.activeFilterChip]}
+                        >
+                            <Text style={[styles.filterText, transactionTypeFilter === f && styles.activeFilterText]}>
+                                {f === 'ALL' ? 'Tout' : f === 'PURCHASE' ? 'Achats' : 'Ventes'}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+                {/* Status Filter */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop: 8}}>
+                    <Text style={{alignSelf:'center', marginRight: 8, fontSize: 12, color: '#6b7280'}}>Statut:</Text>
+                    {(['ALL', 'COMPLETED', 'PENDING', 'FAILED', 'CANCELED', 'REFUNDED'] as const).map(f => (
                         <TouchableOpacity 
                             key={f} 
                             onPress={() => setTransactionFilter(f)}
                             style={[styles.filterChip, transactionFilter === f && styles.activeFilterChip]}
                         >
                             <Text style={[styles.filterText, transactionFilter === f && styles.activeFilterText]}>
-                                {f === 'ALL' ? 'Tout' : f === 'COMPLETED' ? 'Validé' : 'En attente'}
+                                {f === 'ALL' ? 'Tout' : 
+                                 f === 'COMPLETED' ? 'Validé' : 
+                                 f === 'PENDING' ? 'En attente' :
+                                 f === 'FAILED' ? 'Échoué' :
+                                 f === 'CANCELED' ? 'Annulé' : 'Remboursé'}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+                {/* Sort Filter */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop: 8}}>
+                    <Text style={{alignSelf:'center', marginRight: 8, fontSize: 12, color: '#6b7280'}}>Tri:</Text>
+                    {[
+                        { key: 'DATE_DESC', label: 'Date ↓' },
+                        { key: 'DATE_ASC', label: 'Date ↑' },
+                        { key: 'PRICE_DESC', label: 'Prix ↓' },
+                        { key: 'PRICE_ASC', label: 'Prix ↑' },
+                    ].map(s => (
+                        <TouchableOpacity 
+                            key={s.key} 
+                            onPress={() => setTransactionSort(s.key as any)}
+                            style={[styles.filterChip, transactionSort === s.key && styles.activeFilterChip]}
+                        >
+                            <Text style={[styles.filterText, transactionSort === s.key && styles.activeFilterText]}>
+                                {s.label}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -319,12 +420,50 @@ export function UserProfile() {
             </View>
 
             {transactions
-                .filter(t => transactionFilter === 'ALL' || t.status === transactionFilter)
+                .filter(t => {
+                    if (transactionFilter !== 'ALL' && t.status !== transactionFilter) return false;
+                    if (transactionTypeFilter === 'PURCHASE' && t.isSale) return false;
+                    if (transactionTypeFilter === 'SALE' && !t.isSale) return false;
+                    return true;
+                })
+                .sort((a, b) => {
+                    const dateA = new Date(a.transactionDate).getTime();
+                    const dateB = new Date(b.transactionDate).getTime();
+                    const amountA = a.isSale ? a.vendorAmount : a.totalAmount;
+                    const amountB = b.isSale ? b.vendorAmount : b.totalAmount;
+
+                    switch (transactionSort) {
+                        case 'DATE_ASC': return dateA - dateB;
+                        case 'DATE_DESC': return dateB - dateA;
+                        case 'PRICE_ASC': return amountA - amountB;
+                        case 'PRICE_DESC': return amountB - amountA;
+                        default: return 0;
+                    }
+                })
                 .length === 0 ? (
                 <Text style={styles.emptyText}>Aucune transaction trouvée</Text>
             ) : (
                 transactions
-                    .filter(t => transactionFilter === 'ALL' || t.status === transactionFilter)
+                    .filter(t => {
+                        if (transactionFilter !== 'ALL' && t.status !== transactionFilter) return false;
+                        if (transactionTypeFilter === 'PURCHASE' && t.isSale) return false;
+                        if (transactionTypeFilter === 'SALE' && !t.isSale) return false;
+                        return true;
+                    })
+                    .sort((a, b) => {
+                        const dateA = new Date(a.transactionDate).getTime();
+                        const dateB = new Date(b.transactionDate).getTime();
+                        const amountA = a.isSale ? a.vendorAmount : a.totalAmount;
+                        const amountB = b.isSale ? b.vendorAmount : b.totalAmount;
+
+                        switch (transactionSort) {
+                            case 'DATE_ASC': return dateA - dateB;
+                            case 'DATE_DESC': return dateB - dateA;
+                            case 'PRICE_ASC': return amountA - amountB;
+                            case 'PRICE_DESC': return amountB - amountA;
+                            default: return 0;
+                        }
+                    })
                     .map(t => (
                     <View key={t.id} style={{marginBottom: 8}}>
                         {renderTransactionItem({item: t})}
@@ -354,7 +493,7 @@ export function UserProfile() {
                     ) : (
                         ownedTickets.map(t => (
                             <View key={t.id} style={{marginBottom: 8}}>
-                                {renderTicketItem({item: t})}
+                                {renderTicketItem({item: t, mode: 'owned'})}
                             </View>
                         ))
                     )}
@@ -384,7 +523,7 @@ export function UserProfile() {
                             .filter(t => sellingFilter === 'ALL' || t.status === sellingFilter)
                             .map(t => (
                             <View key={t.id} style={{marginBottom: 8}}>
-                                {renderTicketItem({item: t})}
+                                {renderTicketItem({item: t, mode: 'selling'})}
                             </View>
                         )))
                     }
