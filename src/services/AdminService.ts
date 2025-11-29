@@ -1,46 +1,6 @@
-import axios from 'axios';
-import { Event, EventCategory, Ticket, User, Transaction } from '../types';
-import { apiConfig } from '../config';
-import * as SecureStore from 'expo-secure-store'; // Import nécessaire pour récupérer le token
+import { Event, EventCategory, Ticket, User, Transaction, Report } from '../types';
+import { api } from './api';
 
-const EXPO_PUBLIC_API_GATEWAY_URL = apiConfig.baseUrl;
-const api = axios.create({
-  baseURL: EXPO_PUBLIC_API_GATEWAY_URL,
-  headers: { 'Content-Type': 'application/json' }
-});
-// --- INTERCEPTEUR D'AUTHENTIFICATION ---
-// Injecte le token Bearer dans chaque requête sortante
-api.interceptors.request.use(
-  async (config) => {
-    try {
-      // Récupère le token stocké par AuthContext lors du login
-      const token = await SecureStore.getItemAsync('accessToken');
-      
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch (error) {
-      console.error("Erreur lors de la récupération du token pour l'intercepteur:", error);
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// --- INTERCEPTEUR DE RÉPONSE (Optionnel mais recommandé) ---
-// Gère les erreurs 401/403 globalement
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      console.warn("Erreur d'authentification (401/403) dans AdminService");
-      // Ici, vous pourriez déclencher une déconnexion ou un refresh token si nécessaire
-    }
-    return Promise.reject(error);
-  }
-);
 export const AdminService = {
   // --- Gestion Événements ---
   createEvent: async (eventData: Partial<Event>): Promise<Event> => {
@@ -64,6 +24,10 @@ export const AdminService = {
     // Backend: GET /api/tickets/admin/all
     const response = await api.get<Ticket[]>('/tickets/admin/all'); 
     return response.data;
+  },
+
+  cancelTicket: async (ticketId: string): Promise<void> => {
+    const response = await api.post(`/tickets/admin/${ticketId}/cancel`);
   },
 
   createCategory: async (label: string): Promise<EventCategory> => {
@@ -127,6 +91,10 @@ export const AdminService = {
     await api.put(`/users/admin/users/${id}`, userData);
   },
 
+  updateUserPassword: async (id: string, password: string): Promise<void> => {
+    await api.put(`/users/admin/users/${id}/password`, { password });
+  },
+
   /**
    * Supprime un utilisateur définitivement
    */
@@ -143,5 +111,17 @@ export const AdminService = {
   },
   refundTransaction: async (transactionId: string): Promise<void> => {
     await api.post(`/transactions/admin/${transactionId}/refund`);
+  },
+
+  // --- Gestion Signalements ---
+  getAllReports: async (): Promise<Report[]> => {
+    // GET /reports/admin/all
+    const response = await api.get<Report[]>('/interactions/reports/admin/all');
+    return response.data;
+  },
+
+  updateReportStatus: async (reportId: number, status: string, adminAction: string): Promise<void> => {
+    // PUT /reports/admin/{id}/status
+    await api.put(`/interactions/reports/admin/${reportId}/status`, { status, adminAction });
   },
 };

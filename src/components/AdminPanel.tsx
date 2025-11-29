@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ScrollView } from 'react-native';
-import { Event, EventCategory, Ticket, User, Transaction } from '../types';
+import { Event, EventCategory, Ticket, User, Transaction, Report } from '../types';
 import { AdminService } from '../services/AdminService';
 import { EventService } from '../services/EventService';
 import { CreateEventModal } from './CreateEventModal';
@@ -13,10 +13,11 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { stat } from 'fs';
 import { TransactionDetailModal } from './TransactionDetailModal';
+import { ReportDetailModal } from './ReportDetailModal';
 
 export function AdminPanel() {
   // Onglet actif (Ajout de 'transactions')
-  const [activeTab, setActiveTab] = useState<'events' | 'tickets' | 'users' | 'categories' | 'transactions'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'tickets' | 'users' | 'categories' | 'transactions' | 'reports'>('events');
   
   // Données principales
   const [data, setData] = useState<any[]>([]);
@@ -24,7 +25,8 @@ export function AdminPanel() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<EventCategory[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]); // AJOUT
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [reports, setReports] = useState<Report[]>([]); // AJOUT
 
   // États des Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -43,6 +45,9 @@ export function AdminPanel() {
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+
   // --- FILTRES TICKETS ---
   const [ticketSearch, setTicketSearch] = useState('');
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>('ALL');
@@ -56,6 +61,20 @@ export function AdminPanel() {
   // --- AJOUT : FILTRES USERS ---
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
+
+  // --- AJOUT : FILTRES REPORTS ---
+  const [reportStatusFilter, setReportStatusFilter] = useState<string>('ALL');
+  const [reportTypeFilter, setReportTypeFilter] = useState<string>('ALL');
+  const [reportDateFilter, setReportDateFilter] = useState('');
+
+  // --- NOUVEAUX ETATS POUR LE TRI ET COLLAPSE ---
+  const [showTicketFilters, setShowTicketFilters] = useState(false);
+  const [ticketSort, setTicketSort] = useState<'DATE_DESC' | 'DATE_ASC' | 'PRICE_DESC' | 'PRICE_ASC'>('DATE_DESC');
+
+  const [showTransFilters, setShowTransFilters] = useState(false);
+  const [transSort, setTransSort] = useState<'DATE_DESC' | 'DATE_ASC' | 'PRICE_DESC' | 'PRICE_ASC'>('DATE_DESC');
+
+  const [refreshing, setRefreshing] = useState(false);
 
   // --- CHARGEMENT DES DONNÉES ---
   const loadData = async () => {
@@ -89,12 +108,27 @@ export function AdminPanel() {
       }
       else if (activeTab === 'transactions') {
         // Pour les transactions, on a besoin des users et events pour afficher les détails
-        const [loadedTrans, loadedUsers] = await Promise.all([
+        const [loadedTrans, loadedUsers, loadedTickets] = await Promise.all([
             AdminService.getAllTransactions(),
-            AdminService.getAllUsers()
+            AdminService.getAllUsers(),
+            AdminService.getAllTickets()
         ]);
         setTransactions(loadedTrans);
         setUsers(loadedUsers);
+        setTickets(loadedTickets);
+        // setData géré par useEffect
+      }
+      else if (activeTab === 'reports') {
+        const [loadedReports, loadedUsers, loadedTickets, loadedTrans] = await Promise.all([
+            AdminService.getAllReports(),
+            AdminService.getAllUsers(),
+            AdminService.getAllTickets(),
+            AdminService.getAllTransactions()
+        ]);
+        setReports(loadedReports);
+        setUsers(loadedUsers);
+        setTickets(loadedTickets);
+        setTransactions(loadedTrans);
         // setData géré par useEffect
       }
     } catch (e) {
@@ -133,9 +167,21 @@ export function AdminPanel() {
       if (ticketDateFilter) {
         result = result.filter(t => events.find(e => e.id === t.eventId)?.startDate.startsWith(ticketDateFilter));
       }
+      
+      // Tri
+      result.sort((a, b) => {
+          if (ticketSort === 'DATE_DESC' || ticketSort === 'DATE_ASC') {
+              const dateA = a.creationDate ? new Date(a.creationDate).getTime() : 0;
+              const dateB = b.creationDate ? new Date(b.creationDate).getTime() : 0;
+              return ticketSort === 'DATE_DESC' ? dateB - dateA : dateA - dateB;
+          } else {
+              return ticketSort === 'PRICE_DESC' ? b.salePrice - a.salePrice : a.salePrice - b.salePrice;
+          }
+      });
+
       setData(result);
     }
-  }, [tickets, ticketSearch, ticketStatusFilter, ticketCategoryFilter, ticketDateFilter, events, activeTab]);
+  }, [tickets, ticketSearch, ticketStatusFilter, ticketCategoryFilter, ticketDateFilter, events, activeTab, ticketSort]);
 
   // --- AJOUT : FILTRAGE TRANSACTIONS ---
   useEffect(() => {
@@ -154,17 +200,20 @@ export function AdminPanel() {
             result = result.filter(t => t.status.toUpperCase() === transStatusFilter);
         }
         
-        // Tri par date décroissante (le plus récent en haut)
-// Tri par date décroissante
+        // Tri
         result.sort((a, b) => {
-            const dateA = a.transactionDate ? new Date(a.transactionDate).getTime() : 0;
-            const dateB = b.transactionDate ? new Date(b.transactionDate).getTime() : 0;
-            return dateB - dateA;
+            if (transSort === 'DATE_DESC' || transSort === 'DATE_ASC') {
+                const dateA = a.transactionDate ? new Date(a.transactionDate).getTime() : 0;
+                const dateB = b.transactionDate ? new Date(b.transactionDate).getTime() : 0;
+                return transSort === 'DATE_DESC' ? dateB - dateA : dateA - dateB;
+            } else {
+                return transSort === 'PRICE_DESC' ? b.totalAmount - a.totalAmount : a.totalAmount - b.totalAmount;
+            }
         });
 
         setData(result);
     }
-  }, [transactions, transSearch, transStatusFilter, activeTab]);
+  }, [transactions, transSearch, transStatusFilter, activeTab, transSort]);
 
   // --- AJOUT : FILTRAGE USERS ---
   useEffect(() => {
@@ -188,6 +237,32 @@ export function AdminPanel() {
     }
   }, [users, userSearch, userStatusFilter, activeTab]);
 
+  // --- AJOUT : FILTRAGE REPORTS ---
+  useEffect(() => {
+    if (activeTab === 'reports') {
+      let result = reports;
+      if (reportStatusFilter !== 'ALL') {
+        result = result.filter(r => r.status === reportStatusFilter);
+      }
+      if (reportTypeFilter !== 'ALL') {
+        result = result.filter(r => r.reportType === reportTypeFilter);
+      }
+      if (reportDateFilter) {
+        // Filtrage simple par date (YYYY-MM-DD)
+        result = result.filter(r => r.reportDate.startsWith(reportDateFilter));
+      }
+      // Tri par date décroissante
+      result.sort((a, b) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime());
+      setData(result);
+    }
+  }, [reports, reportStatusFilter, reportTypeFilter, reportDateFilter, activeTab]);
+
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
 
   // --- HANDLERS ACTIONS ---
   const handleDeleteEvent = (id: string) => {
@@ -242,13 +317,55 @@ export function AdminPanel() {
   };
 
   const openTransactionDetail = (trans: Transaction) => {
-      setSelectedTrans(trans);
-      setShowTransModal(true);
+      if (showReportModal) {
+          setShowReportModal(false);
+          setTimeout(() => {
+              setSelectedTrans(trans);
+              setShowTransModal(true);
+          }, 500);
+      } else {
+          setSelectedTrans(trans);
+          setShowTransModal(true);
+      }
   };
 
   const openTicketDetail = (ticket: Ticket) => {
-      setSelectedTicket(ticket);
-      setShowTicketModal(true);
+      if (showReportModal) {
+          setShowReportModal(false);
+          setTimeout(() => {
+              setSelectedTicket(ticket);
+              setShowTicketModal(true);
+          }, 500);
+      } else {
+          setSelectedTicket(ticket);
+          setShowTicketModal(true);
+      }
+  };
+
+  const openReportDetail = (report: Report) => {
+      setSelectedReport(report);
+      setShowReportModal(true);
+  };
+
+  const handleUpdateReportStatus = (report: Report, newStatus: string) => {
+    Alert.alert(
+      "Mettre à jour le statut",
+      `Passer le signalement en ${newStatus} ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { 
+          text: "Confirmer", 
+          onPress: async () => {
+            try {
+              await AdminService.updateReportStatus(report.id, newStatus, "Updated via Admin Panel");
+              loadData();
+            } catch (e) {
+              Alert.alert("Erreur", "Impossible de mettre à jour le statut");
+            }
+          }
+        }
+      ]
+    );
   };
 
 
@@ -256,7 +373,13 @@ export function AdminPanel() {
 
   const renderTicketItem = (ticket: Ticket) => {
     const event = events.find(e => e.id === ticket.eventId);
-    const statusColors: Record<string, string> = { 'AVAILABLE': '#10b981', 'SOLD': '#6b7280', 'PENDING': '#f59e0b', 'CANCELED': '#ef4444' };
+    const statusColors: Record<string, string> = { 
+      'AVAILABLE': '#10b981', 
+      'SOLD': '#374151',      // Gris foncé pour vendu
+      'RESERVED': '#8b5cf6',  // Violet pour réservé
+      'PENDING': '#f59e0b', 
+      'CANCELED': '#ef4444' 
+    };
     const statusKey = ticket.status?.toUpperCase() || 'AVAILABLE';
     const statusColor = statusColors[statusKey] || '#6b7280';
 
@@ -425,6 +548,16 @@ export function AdminPanel() {
         const color = statusColors[item.status] || '#6b7280';
         const buyer = users.find(u => u.id === item.buyerId);
 
+        const getIconName = (status: string) => {
+            switch (status) {
+                case 'COMPLETED': return 'checkmark';
+                case 'FAILED': return 'alert-circle';
+                case 'REFUNDED': return 'arrow-undo';
+                case 'PENDING': return 'time';
+                default: return 'help-circle';
+            }
+        };
+
         return (
           <TouchableOpacity 
             style={[styles.transCard, { borderLeftColor: color }]} 
@@ -433,7 +566,7 @@ export function AdminPanel() {
           >
              <View style={styles.transRow}>
                  <View style={[styles.transIconContainer, { backgroundColor: color + '15' }]}>
-                     <Ionicons name={item.status === 'COMPLETED' ? "checkmark" : "time"} size={20} color={color} />
+                     <Ionicons name={getIconName(item.status)} size={20} color={color} />
                  </View>
                  <View style={{flex: 1, marginLeft: 12}}>
                      <Text style={styles.transTitle}>Transaction</Text>
@@ -449,84 +582,203 @@ export function AdminPanel() {
           </TouchableOpacity>
         );
     }
+    if (activeTab === 'reports') {
+      const statusColors: any = { 'PENDING': '#f59e0b', 'UNDER_INVESTIGATION': '#3b82f6', 'RESOLVED': '#10b981', 'DISMISSED': '#6b7280' };
+      const color = statusColors[item.status] || '#6b7280';
+      
+      return (
+        <TouchableOpacity 
+            style={[styles.cardRow, { flexDirection: 'column', alignItems: 'stretch', padding: 12 }]}
+            onPress={() => openReportDetail(item)}
+            activeOpacity={0.7}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'flex-start' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
+              <View style={[styles.iconBox, { backgroundColor: '#fee2e2', width: 40, height: 40 }]}>
+                <Ionicons name="warning" size={20} color="#ef4444" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { fontSize: 14 }]} numberOfLines={1}>{item.reportType}</Text>
+                <Text style={[styles.cardSubtitle, { fontSize: 11 }]}>{new Date(item.reportDate).toLocaleDateString()}</Text>
+              </View>
+            </View>
+            <View style={[styles.badge, { backgroundColor: color + '20', alignSelf: 'flex-start' }]}>
+              <Text style={[styles.badgeText, { color: color, fontSize: 9 }]}>{item.status}</Text>
+            </View>
+          </View>
+          
+          <Text style={{ fontSize: 13, color: '#374151', marginBottom: 8, fontStyle: 'italic' }} numberOfLines={2}>"{item.reason}"</Text>
+          
+          {item.evidence ? (
+             <Text style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }} numberOfLines={1}>Preuve: {item.evidence}</Text>
+          ) : null}
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 8 }}>
+            {item.status !== 'RESOLVED' && item.status !== 'DISMISSED' && (
+              <>
+                {item.status === 'PENDING' && (
+                  <TouchableOpacity onPress={() => handleUpdateReportStatus(item, 'UNDER_INVESTIGATION')} style={[styles.actionButton, { backgroundColor: '#eff6ff', paddingVertical: 6, paddingHorizontal: 10 }]}>
+                    <Text style={{ color: '#2563eb', fontSize: 11, fontWeight: '600' }}>Investiguer</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => handleUpdateReportStatus(item, 'DISMISSED')} style={[styles.actionButton, { backgroundColor: '#f3f4f6', paddingVertical: 6, paddingHorizontal: 10 }]}>
+                  <Text style={{ color: '#4b5563', fontSize: 11, fontWeight: '600' }}>Rejeter</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleUpdateReportStatus(item, 'RESOLVED')} style={[styles.actionButton, { backgroundColor: '#ecfdf5', paddingVertical: 6, paddingHorizontal: 10 }]}>
+                  <Text style={{ color: '#059669', fontSize: 11, fontWeight: '600' }}>Résoudre</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
+      );
+    }
     return null;
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Administration</Text>
-      
-      {/* Onglets */}
-      <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContainer} style={styles.tabsScrollView}>
-          {(['events', 'categories', 'tickets', 'users', 'transactions'] as const).map(tab => (
-            <TouchableOpacity 
-              key={tab} 
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Zone Filtres (Tickets) */}
-      {activeTab === 'tickets' && (
-        <View style={styles.filterSection}>
-          <Input placeholder="Rechercher..." value={ticketSearch} onChangeText={setTicketSearch} style={styles.searchBar} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
-            {['ALL', 'AVAILABLE', 'SOLD', 'CANCELED'].map((status) => (
-                <TouchableOpacity key={status} style={[styles.chip, ticketStatusFilter === status && styles.chipActive]} onPress={() => setTicketStatusFilter(status)}>
-                    <Text style={[styles.chipText, ticketStatusFilter === status && styles.chipTextActive]}>{status}</Text>
-                </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Zone Filtres (Transactions) */}
-      {activeTab === 'transactions' && (
-        <View style={styles.filterSection}>
-          <Input placeholder="Rechercher ID ou Acheteur..." value={transSearch} onChangeText={setTransSearch} style={styles.searchBar} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
-            {['ALL', 'COMPLETED', 'PENDING', 'FAILED', 'REFUNDED'].map((status) => (
-                <TouchableOpacity key={status} style={[styles.chip, transStatusFilter === status && styles.chipActive]} onPress={() => setTransStatusFilter(status)}>
-                    <Text style={[styles.chipText, transStatusFilter === status && styles.chipTextActive]}>{status}</Text>
-                </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Zone Filtres (Users) */}
-      {activeTab === 'users' && (
-        <View style={styles.filterSection}>
-          <Input placeholder="Rechercher un utilisateur..." value={userSearch} onChangeText={setUserSearch} style={styles.searchBar} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
-            {['ALL', 'ACTIVE', 'SUSPENDED'].map((status) => (
-                <TouchableOpacity key={status} style={[styles.chip, userStatusFilter === status && styles.chipActive]} onPress={() => setUserStatusFilter(status as any)}>
-                    <Text style={[styles.chipText, userStatusFilter === status && styles.chipTextActive]}>{status}</Text>
-                </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Boutons d'ajout */}
-      {activeTab === 'events' && <Button title="+ Événement" onPress={() => setShowCreateModal(true)} style={styles.addButton} />}
-      {activeTab === 'categories' && <Button title="+ Catégorie" onPress={openCreateCategory} style={styles.addButton} />}
-      {activeTab === 'users' && <Button title="+ Utilisateur" onPress={openCreateUser} style={styles.addButton} />}
-
-      {/* Liste */}
       <FlatList
         data={data}
         keyExtractor={(item) => item.id || item.categoryId || item.transactionId || Math.random().toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <View>
+            <Text style={styles.headerTitle}>Administration</Text>
+            
+            {/* Onglets */}
+            <View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContainer} style={styles.tabsScrollView}>
+                {(['events', 'categories', 'tickets', 'users', 'transactions', 'reports'] as const).map(tab => (
+                  <TouchableOpacity 
+                    key={tab} 
+                    style={[styles.tab, activeTab === tab && styles.activeTab]}
+                    onPress={() => setActiveTab(tab)}
+                  >
+                    <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Zone Filtres (Tickets) */}
+            {activeTab === 'tickets' && (
+              <View style={styles.filterSection}>
+                <View style={{flexDirection: 'row', gap: 8, marginBottom: 8}}>
+                  <Input placeholder="Rechercher..." value={ticketSearch} onChangeText={setTicketSearch} style={[styles.searchBar, {flex: 1, marginBottom: 0}]} />
+                  <TouchableOpacity onPress={() => setShowTicketFilters(!showTicketFilters)} style={styles.filterToggleButton}>
+                      <Ionicons name={showTicketFilters ? "chevron-up" : "options"} size={20} color="#4b5563" />
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
+                  {['ALL', 'AVAILABLE', 'SOLD', 'RESERVED', 'CANCELED'].map((status) => (
+                      <TouchableOpacity key={status} style={[styles.chip, ticketStatusFilter === status && styles.chipActive]} onPress={() => setTicketStatusFilter(status)}>
+                          <Text style={[styles.chipText, ticketStatusFilter === status && styles.chipTextActive]}>{status}</Text>
+                      </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                {showTicketFilters && (
+                    <View style={styles.advancedFilters}>
+                        <Text style={styles.filterLabel}>Trier par :</Text>
+                        <View style={styles.sortRow}>
+                            <TouchableOpacity onPress={() => setTicketSort('DATE_DESC')} style={[styles.sortChip, ticketSort === 'DATE_DESC' && styles.sortChipActive]}><Text style={[styles.sortChipText, ticketSort === 'DATE_DESC' && styles.sortChipTextActive]}>Date ↓</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setTicketSort('DATE_ASC')} style={[styles.sortChip, ticketSort === 'DATE_ASC' && styles.sortChipActive]}><Text style={[styles.sortChipText, ticketSort === 'DATE_ASC' && styles.sortChipTextActive]}>Date ↑</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setTicketSort('PRICE_DESC')} style={[styles.sortChip, ticketSort === 'PRICE_DESC' && styles.sortChipActive]}><Text style={[styles.sortChipText, ticketSort === 'PRICE_DESC' && styles.sortChipTextActive]}>Prix ↓</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setTicketSort('PRICE_ASC')} style={[styles.sortChip, ticketSort === 'PRICE_ASC' && styles.sortChipActive]}><Text style={[styles.sortChipText, ticketSort === 'PRICE_ASC' && styles.sortChipTextActive]}>Prix ↑</Text></TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+              </View>
+            )}
+
+            {/* Zone Filtres (Transactions) */}
+            {activeTab === 'transactions' && (
+              <View style={styles.filterSection}>
+                <View style={{flexDirection: 'row', gap: 8, marginBottom: 8}}>
+                  <Input placeholder="Rechercher ID ou Acheteur..." value={transSearch} onChangeText={setTransSearch} style={[styles.searchBar, {flex: 1, marginBottom: 0}]} />
+                  <TouchableOpacity onPress={() => setShowTransFilters(!showTransFilters)} style={styles.filterToggleButton}>
+                      <Ionicons name={showTransFilters ? "chevron-up" : "options"} size={20} color="#4b5563" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
+                  {['ALL', 'COMPLETED', 'PENDING', 'FAILED', 'REFUNDED', 'CANCELED'].map((status) => (
+                      <TouchableOpacity key={status} style={[styles.chip, transStatusFilter === status && styles.chipActive]} onPress={() => setTransStatusFilter(status)}>
+                          <Text style={[styles.chipText, transStatusFilter === status && styles.chipTextActive]}>{status}</Text>
+                      </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                {showTransFilters && (
+                    <View style={styles.advancedFilters}>
+                        <Text style={styles.filterLabel}>Trier par :</Text>
+                        <View style={styles.sortRow}>
+                            <TouchableOpacity onPress={() => setTransSort('DATE_DESC')} style={[styles.sortChip, transSort === 'DATE_DESC' && styles.sortChipActive]}><Text style={[styles.sortChipText, transSort === 'DATE_DESC' && styles.sortChipTextActive]}>Date ↓</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setTransSort('DATE_ASC')} style={[styles.sortChip, transSort === 'DATE_ASC' && styles.sortChipActive]}><Text style={[styles.sortChipText, transSort === 'DATE_ASC' && styles.sortChipTextActive]}>Date ↑</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setTransSort('PRICE_DESC')} style={[styles.sortChip, transSort === 'PRICE_DESC' && styles.sortChipActive]}><Text style={[styles.sortChipText, transSort === 'PRICE_DESC' && styles.sortChipTextActive]}>Prix ↓</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => setTransSort('PRICE_ASC')} style={[styles.sortChip, transSort === 'PRICE_ASC' && styles.sortChipActive]}><Text style={[styles.sortChipText, transSort === 'PRICE_ASC' && styles.sortChipTextActive]}>Prix ↑</Text></TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+              </View>
+            )}
+
+            {/* Zone Filtres (Users) */}
+            {activeTab === 'users' && (
+              <View style={styles.filterSection}>
+                <Input placeholder="Rechercher un utilisateur..." value={userSearch} onChangeText={setUserSearch} style={styles.searchBar} />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
+                  {['ALL', 'ACTIVE', 'SUSPENDED'].map((status) => (
+                      <TouchableOpacity key={status} style={[styles.chip, userStatusFilter === status && styles.chipActive]} onPress={() => setUserStatusFilter(status as any)}>
+                          <Text style={[styles.chipText, userStatusFilter === status && styles.chipTextActive]}>{status}</Text>
+                      </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Zone Filtres (Reports) */}
+            {activeTab === 'reports' && (
+              <View style={styles.filterSection}>
+                <View style={{flexDirection: 'row', gap: 8, marginBottom: 8}}>
+                    <Input 
+                        placeholder="Date (YYYY-MM-DD)..." 
+                        value={reportDateFilter} 
+                        onChangeText={setReportDateFilter} 
+                        style={[styles.searchBar, {flex: 1, marginBottom: 0}]} 
+                    />
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
+                  {['ALL', 'PENDING', 'UNDER_INVESTIGATION', 'RESOLVED', 'DISMISSED'].map((status) => (
+                      <TouchableOpacity key={status} style={[styles.chip, reportStatusFilter === status && styles.chipActive]} onPress={() => setReportStatusFilter(status)}>
+                          <Text style={[styles.chipText, reportStatusFilter === status && styles.chipTextActive]}>{status}</Text>
+                      </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.chipsContainer, {marginTop: 4}]}>
+                  {['ALL', 'SPAM', 'FRAUD', 'HARASSMENT', 'INAPPROPRIATE_CONTENT', 'OTHER'].map((type) => (
+                      <TouchableOpacity key={type} style={[styles.chip, reportTypeFilter === type && styles.chipActive]} onPress={() => setReportTypeFilter(type)}>
+                          <Text style={[styles.chipText, reportTypeFilter === type && styles.chipTextActive]}>{type}</Text>
+                      </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Boutons d'ajout */}
+            {activeTab === 'events' && <Button title="+ Événement" onPress={() => setShowCreateModal(true)} style={styles.addButton} />}
+            {activeTab === 'categories' && <Button title="+ Catégorie" onPress={openCreateCategory} style={styles.addButton} />}
+            {activeTab === 'users' && <Button title="+ Utilisateur" onPress={openCreateUser} style={styles.addButton} />}
+          </View>
+        }
         ListEmptyComponent={<Text style={styles.emptyText}>Aucune donnée trouvée</Text>}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
 
       {/* Modals */}
@@ -538,6 +790,10 @@ export function AdminPanel() {
         visible={showTransModal}
         transaction={selectedTrans}
         buyer={selectedTrans ? users.find(u => u.id === selectedTrans.buyerId) : undefined}
+        seller={selectedTrans ? (() => {
+            const ticket = tickets.find(t => t.id === selectedTrans.ticketId);
+            return ticket ? users.find(u => u.id === ticket.vendorId) : undefined;
+        })() : undefined}
         onClose={() => setShowTransModal(false)}
         onSuccess={loadData}
       />
@@ -546,6 +802,27 @@ export function AdminPanel() {
         ticket={selectedTicket}
         event={selectedTicket ? events.find(e => e.id === selectedTicket.eventId) : undefined}
         onClose={() => setShowTicketModal(false)}
+        isAdmin={true}
+        onUpdate={loadData}
+      />
+      <ReportDetailModal 
+        visible={showReportModal}
+        report={selectedReport}
+        reporter={selectedReport ? users.find(u => u.id === selectedReport.reporterId) : undefined}
+        users={users}
+        tickets={tickets}
+        transactions={transactions}
+        onOpenTicket={openTicketDetail}
+        onOpenTransaction={openTransactionDetail}
+        onOpenUser={handleEditUser}
+        onClose={() => setShowReportModal(false)}
+        onUpdateStatus={(report, status) => {
+            // On utilise la fonction existante mais on doit l'adapter car elle attend un event onPress
+            // Ici on appelle directement le service
+            AdminService.updateReportStatus(report.id, status, "Updated via Detail Modal")
+                .then(() => loadData())
+                .catch(() => Alert.alert("Erreur", "Impossible de mettre à jour le statut"));
+        }}
       />
     </View>
   );
@@ -601,20 +878,20 @@ const styles = StyleSheet.create({
   smallChipText: { fontSize: 11, color: '#374151' },
 
   // Carte Ticket
-  ticketCard: { backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#6b7280' },
+  ticketCard: { backgroundColor: 'white', borderRadius: 12, padding: 12, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#6b7280' },
   ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  ticketEventName: { fontSize: 16, fontWeight: 'bold', color: '#1f2937', flex: 1, marginRight: 8 },
-  ticketDate: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  ticketEventName: { fontSize: 15, fontWeight: 'bold', color: '#1f2937', flex: 1, marginRight: 8 },
+  ticketDate: { fontSize: 11, color: '#6b7280', marginTop: 2 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
   statusText: { fontSize: 10, fontWeight: 'bold' },
-  ticketDetails: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#f9fafb', padding: 8, borderRadius: 8, marginBottom: 12 },
-  ticketDetailItem: { alignItems: 'center', flex: 1 },
+  ticketDetails: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: '#f9fafb', padding: 8, borderRadius: 8, marginBottom: 12 },
+  ticketDetailItem: { alignItems: 'center', width: '50%', marginBottom: 6 },
   detailLabel: { fontSize: 10, color: '#9ca3af', marginBottom: 2, textTransform: 'uppercase' },
-  detailValue: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  priceValue: { fontSize: 14, fontWeight: 'bold', color: '#059669' },
+  detailValue: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  priceValue: { fontSize: 13, fontWeight: 'bold', color: '#059669' },
   ticketFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 8 },
   sellerInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  sellerName: { fontSize: 12, color: '#4b5563', marginLeft: 4 },
+  sellerName: { fontSize: 11, color: '#4b5563', marginLeft: 4 },
   categoryTag: { backgroundColor: '#e0e7ff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
   categoryTagText: { fontSize: 10, color: '#4338ca', fontWeight: '600' },
 
@@ -627,4 +904,14 @@ const styles = StyleSheet.create({
   transBuyer: { fontSize: 12, color: '#4b5563', marginTop: 4 },
   transAmount: { fontSize: 16, fontWeight: 'bold', textAlign: 'right' },
   statusTextMini: { fontSize: 10, fontWeight: 'bold', textAlign: 'right', marginTop: 2 },
+
+  // Advanced Filters
+  filterToggleButton: { padding: 10, backgroundColor: '#e5e7eb', borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  advancedFilters: { marginTop: 12, padding: 12, backgroundColor: '#f3f4f6', borderRadius: 12 },
+  filterLabel: { fontSize: 12, fontWeight: '600', color: '#4b5563', marginBottom: 8 },
+  sortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sortChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb' },
+  sortChipActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
+  sortChipText: { fontSize: 12, color: '#4b5563' },
+  sortChipTextActive: { color: '#fff', fontWeight: '600' },
 });

@@ -1,20 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Transaction, User } from '../types';
 import { Button } from './ui/Button';
 import { AdminService } from '../services/AdminService';
+import { CreateReportModal } from './CreateReportModal';
 
 interface TransactionDetailModalProps {
   visible: boolean;
   transaction: (Transaction & { isSale?: boolean }) | null;
   buyer?: User;
+  seller?: User;
   onClose: () => void;
   onSuccess?: () => void; // Callback pour rafraîchir
   mode?: 'admin' | 'user';
 }
 
-export function TransactionDetailModal({ visible, transaction, buyer, onClose, onSuccess, mode = 'admin' }: TransactionDetailModalProps) {
+export function TransactionDetailModal({ visible, transaction, buyer, seller, onClose, onSuccess, mode = 'admin' }: TransactionDetailModalProps) {
+  const [showReportModal, setShowReportModal] = useState(false);
+
   if (!transaction) return null;
 
   const isSale = transaction.isSale;
@@ -66,9 +70,14 @@ export function TransactionDetailModal({ visible, transaction, buyer, onClose, o
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Détail Transaction</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#374151" />
-          </TouchableOpacity>
+          <View style={{flexDirection: 'row', gap: 12}}>
+            <TouchableOpacity onPress={() => setShowReportModal(true)} style={styles.reportButton}>
+                <Ionicons name="flag-outline" size={20} color="#ef4444" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -120,6 +129,23 @@ export function TransactionDetailModal({ visible, transaction, buyer, onClose, o
                   <Text style={styles.userName}>{buyer ? `${buyer.firstName} ${buyer.lastName}` : 'Inconnu'}</Text>
                   <Text style={styles.userEmail}>{buyer?.email || 'Email non disponible'}</Text>
                   <Text style={styles.userId}>ID: {transaction.buyerId}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Informations Vendeur */}
+          {mode === 'admin' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Vendeur</Text>
+              <View style={styles.userCard}>
+                <View style={[styles.avatarPlaceholder, { backgroundColor: '#d1fae5' }]}>
+                  <Text style={[styles.avatarText, { color: '#059669' }]}>{seller?.firstName?.[0] || '?'}</Text>
+                </View>
+                <View>
+                  <Text style={styles.userName}>{seller ? `${seller.firstName} ${seller.lastName}` : 'Inconnu'}</Text>
+                  <Text style={styles.userEmail}>{seller?.email || 'Email non disponible'}</Text>
+                  <Text style={styles.userId}>ID: {seller?.id || 'N/A'}</Text>
                 </View>
               </View>
             </View>
@@ -185,6 +211,14 @@ export function TransactionDetailModal({ visible, transaction, buyer, onClose, o
         <View style={styles.footer}>
              <Button title="Fermer" onPress={onClose} variant="outline" style={{width: '100%'}} />
         </View>
+
+        <CreateReportModal 
+            visible={showReportModal} 
+            onClose={() => setShowReportModal(false)} 
+            targetType="TRANSACTION" 
+            targetId={transaction.id}
+            targetName={`Transaction ${transaction.id.substring(0, 8)}...`}
+        />
       </View>
     </Modal>
   );
@@ -195,6 +229,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   closeButton: { padding: 4 },
+  reportButton: { padding: 4, marginRight: 8 },
   content: { flex: 1, padding: 20 },
   
   statusBanner: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 24 },

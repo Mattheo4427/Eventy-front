@@ -62,7 +62,7 @@ export function Header({
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         {/* Logo */}
         <TouchableOpacity 
@@ -306,8 +306,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 64,
+    paddingVertical: 8,
+    minHeight: 50,
   },
   logo: {
     flex: 0,

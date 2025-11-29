@@ -112,7 +112,7 @@ export function HomeScreen({ onViewEvent, onNavigateToEvents }: HomeScreenProps)
                     </View>
 
                     <Text style={styles.eventLink}>
-                      {t('viewTickets', { ns: 'home', defaultValue: 'Voir les billets' })} →
+                      {t('viewTickets', { ns: 'home', defaultValue: 'Voir les billets' })} 
                     </Text>
                   </View>
                 </TouchableOpacity>

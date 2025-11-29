@@ -8,6 +8,7 @@ import { EventService } from '../services/EventService';
 import { TicketService } from '../services/TicketService';
 import { useAuth } from '../contexts/AuthContext';
 import { BuyTicketModal } from './BuyTicketModal'; // Import du Modal
+import { CreateReportModal } from './CreateReportModal';
 
 interface EventTicketsProps {
   eventId: string;
@@ -30,6 +31,10 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
   // États pour le Modal d'achat
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+  // États pour le Modal de signalement
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [ticketToReport, setTicketToReport] = useState<Ticket | null>(null);
 
   const loadData = async (showLoader = true) => {
     try {
@@ -179,6 +184,9 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
                       <Text style={[styles.ticketType, { color: getTypeColor(ticket.ticketTypeLabel || 'Standard') }]}>
                         {ticket.ticketTypeLabel || 'Standard'}
                       </Text>
+                      <TouchableOpacity onPress={() => { setTicketToReport(ticket); setShowReportModal(true); }} style={{ padding: 4 }}>
+                          <Ionicons name="flag-outline" size={18} color="#ef4444" />
+                      </TouchableOpacity>
                   </View>
                   
                   <View style={styles.locationRow}>
@@ -243,6 +251,16 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
                 // Rafraîchir la liste pour que le billet vendu disparaisse
                 loadData(false);
             }}
+        />
+      )}
+
+      {ticketToReport && (
+        <CreateReportModal 
+            visible={showReportModal} 
+            onClose={() => { setShowReportModal(false); setTicketToReport(null); }} 
+            targetType="TICKET" 
+            targetId={ticketToReport.id}
+            targetName={`Billet ${ticketToReport.ticketTypeLabel || 'Standard'} - ${event?.name || 'Événement'}`}
         />
       )}
     </View>

@@ -53,6 +53,11 @@ export function UserModal({ visible, userToEdit, onClose, onSuccess }: UserModal
       if (userToEdit) {
         // Mode Édition (Attention: nécessite l'endpoint backend)
         await AdminService.updateUser(userToEdit.id, form);
+        
+        // Si mot de passe renseigné, on le met à jour via l'endpoint dédié
+        if (form.password && form.password.trim() !== '') {
+            await AdminService.updateUserPassword(userToEdit.id, form.password);
+        }
       } else {
         // Mode Création
         await AdminService.createUser(form);
@@ -87,10 +92,14 @@ export function UserModal({ visible, userToEdit, onClose, onSuccess }: UserModal
             </View>
           </View>
 
-          {/* Mot de passe obligatoire seulement en création */}
-          {!userToEdit && (
-            <Input label="Mot de passe" value={form.password} onChangeText={t => setForm({...form, password: t})} secureTextEntry />
-          )}
+          {/* Mot de passe */}
+          <Input 
+            label={userToEdit ? "Nouveau mot de passe (optionnel)" : "Mot de passe"} 
+            value={form.password} 
+            onChangeText={t => setForm({...form, password: t})} 
+            secureTextEntry 
+            placeholder={userToEdit ? "Laisser vide pour conserver l'actuel" : ""}
+          />
 
           <Text style={styles.label}>Rôle</Text>
           <View style={styles.roleContainer}>

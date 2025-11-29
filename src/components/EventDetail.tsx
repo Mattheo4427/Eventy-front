@@ -9,11 +9,13 @@ import { useAuth } from '../contexts/AuthContext'; // Pour vérifier la connexio
 
 interface EventDetailProps {
   eventId: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onViewTickets: (eventId: string) => void; // Navigation vers la liste des billets
   onBack: () => void;
 }
 
-export function EventDetail({ eventId, onViewTickets, onBack }: EventDetailProps) {
+export function EventDetail({ eventId, isFavorite = false, onToggleFavorite, onViewTickets, onBack }: EventDetailProps) {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth(); // Récupération du statut de connexion
   
@@ -81,6 +83,16 @@ export function EventDetail({ eventId, onViewTickets, onBack }: EventDetailProps
             <TouchableOpacity onPress={onBack} style={styles.backButtonOverlay}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
+
+            {onToggleFavorite && (
+              <TouchableOpacity onPress={onToggleFavorite} style={styles.favoriteButtonOverlay}>
+                <Ionicons 
+                  name={isFavorite ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={isFavorite ? "#ef4444" : "#fff"} 
+                />
+              </TouchableOpacity>
+            )}
             
             <View style={styles.titleOverlay}>
                 <Text style={styles.title}>{event.name}</Text>
@@ -178,6 +190,7 @@ const styles = StyleSheet.create({
   imageContainer: { position: 'relative', height: 240, width: '100%' },
   coverImage: { width: '100%', height: '100%', backgroundColor: '#f3f4f6' },
   backButtonOverlay: { position: 'absolute', top: 50, left: 16, padding: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20 },
+  favoriteButtonOverlay: { position: 'absolute', top: 50, right: 16, padding: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20 },
   titleOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, paddingTop: 40, backgroundColor: 'rgba(0,0,0,0.4)' },
   title: { fontSize: 26, fontWeight: 'bold', color: '#fff', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
   

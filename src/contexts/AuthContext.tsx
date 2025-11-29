@@ -5,6 +5,7 @@ import { useAuthRequest, makeRedirectUri, ResponseType } from 'expo-auth-session
 import { jwtDecode } from 'jwt-decode'; // Importation nommée pour jwt-decode v3+
 import { User } from '../types';
 import { keycloakConfig, appSchema } from '../config'; // Importe depuis le nouveau fichier de config
+import { authEvents } from '../services/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -177,6 +178,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
     };
     bootstrapAsync();
+  }, []);
+
+  // 6. Écouter les événements de déconnexion automatique (401)
+  useEffect(() => {
+    const handleAutoLogout = async () => {
+      console.log("Auto-logout triggered via 401 interceptor");
+      await setAuthState(null);
+      // On ne redirige pas forcément vers Keycloak logout endpoint ici pour éviter une boucle infinie ou une UX étrange
+      // Mais on nettoie l'état local.
+    };
+
+    authEvents.on('logout', handleAutoLogout);
+
+    return () => {
+      authEvents.off('logout', handleAutoLogout);
+    };
   }, []);
 
   // 5. Définir les fonctions de login/logout

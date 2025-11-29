@@ -108,20 +108,22 @@ export interface Notification {
 }
 
 export interface Message {
-  id: string;
+  id: number; // Backend uses Long
   conversationId: string;
   senderId: string;
   receiverId: string;
   content: string;
-  date: string;
-  read: boolean;
-  type: 'text' | 'system';
+  dateSent: string; // Backend field
+  isRead: boolean; // Backend field
+  messageType: 'GENERAL' | 'SYSTEM' | 'NEGOTIATION'; // Backend enum
 }
 
 export interface Conversation {
   id: string;
-  participants: string[]; // IDs des utilisateurs
+  participant1Id: string;
+  participant2Id: string;
   lastMessage?: Message;
+  unreadCount?: number;
   relatedTicketId?: string;
   relatedEventId?: string;
   createdAt: string;
@@ -136,17 +138,22 @@ export interface FavoriteEvent {
 }
 
 export interface Report {
-  id: string;
+  id: number;
   reporterId: string;
-  reportedType: 'user' | 'ticket' | 'transaction' | 'event' | 'other';
-  reportedId: string;
+  
+  // Cibles (Optionnels selon le type)
+  reportedUserId?: string;
+  reportedTicketId?: string;
+  reportedTransactionId?: string;
+
+  reportType: 'SPAM' | 'SCAM' | 'HARASSMENT' | 'OTHER';
   reason: string;
-  description: string;
-  status: 'pending' | 'investigating' | 'resolved' | 'dismissed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  createdAt: string;
-  updatedAt: string;
-  adminNotes?: string;
-  resolvedBy?: string;
-  resolvedAt?: string;
+  evidence?: string;
+  
+  status: 'PENDING' | 'UNDER_INVESTIGATION' | 'RESOLVED' | 'DISMISSED';
+  
+  reportDate: string; // ISO String
+  
+  adminAction?: string;
+  adminId?: string;
 }

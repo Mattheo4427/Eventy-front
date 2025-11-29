@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, StatusBar, ActivityIndicator } from 'react-native'; // Ajout de ActivityIndicator
+import { View, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   Header,
@@ -8,168 +8,171 @@ import {
   UserProfile,
   AdminPanel,
   AdminDashboard,
-  SellTicketModal,
-  BuyTicketModal,
   LoginModal,
   HomeScreen,
   NotificationCenter,
   MessagingCenter,
-  FavoritesManager,
-  ReportModal,
-  ReportManagement,
-  FavoriteButton,
   EventTickets
 } from './src/components';
 import {
-  User,
-  Event,
-  Ticket,
-  Transaction,
   Notification,
-  Message,
-  Conversation,
   FavoriteEvent,
-  Report
+  User
 } from './src/types';
 import {
-  NotificationService,
-  MessageService,
-  ReportService,
-  FavoriteService
+  NotificationService
 } from './src/services/NotificationService';
-import { useAuth } from './src/contexts/AuthContext'; // Import corrigé
-import { EventService } from './src/services/EventService';
+import { FavoriteService } from './src/services/FavoriteService';
+import { InteractionService } from './src/services/InteractionService';
+import { useAuth } from './src/contexts/AuthContext';
+import { Alert } from 'react-native';
+
+// Notifications removed for Expo Go compatibility (requires Dev Build on Android SDK 53+)
+/*
+import * as Notifications from 'expo-notifications';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+*/
 
 export default function AppContent() {
-  // === MODIFICATION ===
-  // Récupère le vrai utilisateur, le statut de chargement et les fonctions depuis le contexte
   const { 
     user: currentUser, 
     isLoading: authLoading, 
     isAuthenticated, 
-    logout,
-    token // Récupère le token pour les appels API (à utiliser plus tard)
+    logout
   } = useAuth();
-  // ====================
+
+  const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail' | 'event-tickets' | 'profile' | 'admin' | 'admin-dashboard' | 'notifications' | 'messages'>('home');
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // UI State for Modals
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [profileInitialTab, setProfileInitialTab] = useState<'profile' | 'wallet' | 'tickets' | 'favorites'>('profile');
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+
+  // Local Data State
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [favoriteEvents, setFavoriteEvents] = useState<FavoriteEvent[]>([]);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  
+  // Polling for new messages
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    let lastCount = 0;
+
+    const checkMessages = async () => {
+      if (!currentUser) return;
+      try {
+        const conversations = await InteractionService.getMyConversations();
+        const totalUnread = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+        
+        setUnreadMessageCount(totalUnread);
+
+        // If unread count increased, send notification
+        if (totalUnread > lastCount) {
+          // Find the conversation with the most recent unread message
+          const unreadConvs = conversations.filter(c => (c.unreadCount || 0) > 0);
+          // Sort by last message date desc
+          unreadConvs.sort((a, b) => {
+             const dateA = a.lastMessage?.dateSent ? new Date(Array.isArray(a.lastMessage.dateSent) ? new Date(a.lastMessage.dateSent[0], a.lastMessage.dateSent[1]-1, a.lastMessage.dateSent[2], a.lastMessage.dateSent[3], a.lastMessage.dateSent[4], a.lastMessage.dateSent[5]) : a.lastMessage.dateSent).getTime() : 0;
+             const dateB = b.lastMessage?.dateSent ? new Date(Array.isArray(b.lastMessage.dateSent) ? new Date(b.lastMessage.dateSent[0], b.lastMessage.dateSent[1]-1, b.lastMessage.dateSent[2], b.lastMessage.dateSent[3], b.lastMessage.dateSent[4], b.lastMessage.dateSent[5]) : b.lastMessage.dateSent).getTime() : 0;
+             return dateB - dateA;
+          });
+
+          if (unreadConvs.length > 0) {
+            const latestConv = unreadConvs[0];
+            const senderName = `User ${latestConv.participant1Id === currentUser.id ? latestConv.participant2Id.substring(0, 8) : latestConv.participant1Id.substring(0, 8)}...`;
+            
+            // Don't notify if we are currently viewing this conversation
+            if (!showMessaging || activeConversationId !== latestConv.id) {
+               // Fallback to Alert for Expo Go (Notifications require Dev Build)
+               Alert.alert(
+                 "Nouveau message",
+                 `${senderName}: ${latestConv.lastMessage?.content || 'Message reçu'}`,
+                 [
+                   { text: "Ignorer", style: "cancel" },
+                   { text: "Voir", onPress: () => {
+                     setActiveConversationId(latestConv.id);
+                     setShowMessaging(true);
+                   }}
+                 ]
+               );
+               
+               /* 
+               await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: "Nouveau message",
+                  body: `${senderName}: ${latestConv.lastMessage?.content || 'Message reçu'}`,
+                  data: { conversationId: latestConv.id },
+                },
+                trigger: null, // Immediate
+              });
+              */
+            }
+          }
+        }
+        lastCount = totalUnread;
+      } catch (e) {
+        console.error("Error polling messages:", e);
+      }
+    };
+
+    if (currentUser) {
+      checkMessages(); // Initial check
+      interval = setInterval(checkMessages, 5000); // Poll every 5s
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentUser, showMessaging, activeConversationId]);
+
   useEffect(() => {
     if (currentUser?.role === 'ADMIN') {
       setCurrentView('admin-dashboard');
     }
   }, [currentUser]);
-  
-const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail' | 'event-tickets' | 'profile' | 'admin' | 'admin-dashboard' | 'notifications' | 'messages'>('home');
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [showSellModal, setShowSellModal] = useState(false);
-  const [showBuyModal, setShowBuyModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
-  
+  // Load favorites when user logs in
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (currentUser) {
+        try {
+          const favorites = await FavoriteService.getFavorites(currentUser.id);
+          setFavoriteEvents(favorites);
+        } catch (error) {
+          console.error("Error loading favorites:", error);
+        }
+      } else {
+        setFavoriteEvents([]);
+      }
+    };
+    loadFavorites();
+  }, [currentUser]);
 
-  // ... (tous les autres états restent identiques) ...
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showMessaging, setShowMessaging] = useState(false);
-  const [showFavorites, setShowFavorites] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [showReportManagement, setShowReportManagement] = useState(false);
-  const [reportContext, setReportContext] = useState<{
-    type: 'user' | 'ticket' | 'transaction' | 'event' | 'other';
-    id: string;
-    name: string;
-  } | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [favoriteEvents, setFavoriteEvents] = useState<FavoriteEvent[]>([]);
-  const [reports, setReports] = useState<Report[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-
-  // ... (toutes les fonctions addNotification, markNotificationAsRead, etc. restent identiques) ...
-  // === MODIFICATION ===
-  // Cette fonction locale est supprimée. 
-  // Le 'onLogin' du Header ouvre le LoginModal, qui utilise 'login' du contexte.
-  /*
-  const handleLogin = (email: string, password: string) => {
-    // ... (code supprimé)
-  };
-  */
-
-  // === MODIFICATION ===
-  // Cette fonction utilise maintenant le 'logout' du contexte
   const handleLogout = async () => {
-    await logout(); // Appelle la fonction du contexte
+    await logout();
     setCurrentView('home');
     setNotifications([]);
-    setMessages([]);
-    setConversations([]);
     setFavoriteEvents([]);
   };
-  // ====================
 
   const handleViewEvent = (eventId: string) => {
     setSelectedEventId(eventId);
     setCurrentView('event-detail');
   };
-  
-  // === MODIFICATION ===
-  // Ces fonctions vérifient 'isAuthenticated' du contexte
 
-
-  const handleSellTicket = () => {
-    if (!isAuthenticated) { // Utilise isAuthenticated
-      setShowLoginModal(true);
-      return;
-    }
-    setShowSellModal(true);
-  };
-  // ====================
-
-  // ... (handleTicketPurchase et handleTicketListing restent identiques pour l'instant) ...
-  const handleTicketListing = (ticketData: any) => {
-    if (!currentUser) return;
-    
-    const newTicket: Ticket = {
-      id: `ticket_${Date.now()}`,
-      eventId: ticketData.eventId,
-      vendorId: currentUser.id,
-      sellerName: currentUser.username,
-      salePrice: ticketData.price,
-      originalPrice: ticketData.originalPrice,
-      section: ticketData.section,
-      row: ticketData.row,
-      seat: ticketData.seat,
-      //description: ticketData.description,
-      status: 'AVAILABLE',
-      //salePrice: ticketData.price
-    };
-    
-    setTickets(prev => [...prev, newTicket]);
-    setShowSellModal(false);
-    
-    // Notification de mise en vente (logique fictive)
-    const event = events.find(e => e.id === ticketData.eventId);
-    if (event) {
-      const notification = NotificationService.createSystemNotification(
-        currentUser.id,
-        'Billet mis en vente',
-        `Votre billet pour "${event.name}" est maintenant en ligne !`
-      );
-      addNotification(notification);
-    }
-  };
-
-  // ... (toute la logique de notification, message, favoris, report reste identique) ...
-  const addNotification = (notificationData: Omit<Notification, 'id' | 'date'>) => {
-    const notification: Notification = {
-      id: NotificationService.generateNotificationId(),
-      date: new Date().toISOString(),
-      ...notificationData
-    };
-    setNotifications(prev => [notification, ...prev]);
-  };
+  // --- Notification Logic (Local) ---
   const markNotificationAsRead = (notificationId: string) => {
     setNotifications(prev => prev.map(n => 
       n.id === notificationId ? { ...n, read: true } : n
@@ -184,125 +187,59 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
   const deleteNotification = (notificationId: string) => {
     setNotifications(prev => prev.filter(n => n.id !== notificationId));
   };
-  const toggleFavorite = (eventId: string) => {
+
+  // --- Favorites Logic ---
+  const toggleFavorite = async (eventId: string) => {
     if (!currentUser) {
       setShowLoginModal(true);
       return;
     }
-    const isFavorite = FavoriteService.isFavorite(favoriteEvents, currentUser.id, eventId);
-    if (isFavorite) {
-      setFavoriteEvents(prev => FavoriteService.removeFavorite(prev, currentUser.id, eventId));
-    } else {
-      const favoriteData = FavoriteService.createFavorite(currentUser.id, eventId);
-      const favorite: FavoriteEvent = {
-        id: NotificationService.generateFavoriteId(),
-        ...favoriteData
-      };
-      setFavoriteEvents(prev => [...prev, favorite]);
-    }
-  };
-  const removeFavorite = (eventId: string) => {
-    if (!currentUser) return;
-    setFavoriteEvents(prev => FavoriteService.removeFavorite(prev, currentUser.id, eventId));
-  };
-  const submitReport = async (reportData: Omit<Report, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const report: Report = {
-      id: NotificationService.generateReportId(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ...reportData,
-      priority: ReportService.prioritizeReport(reportData as Report)
-    };
-    setReports(prev => [report, ...prev]);
-    setShowReportModal(false);
-    setReportContext(null);
-  };
-  const updateReportStatus = (reportId: string, status: Report['status'] | 'in_review') => {
-    // Accept legacy 'in_review' and map it to the Report type's 'investigating' value
-    const mappedStatus: Report['status'] = status === 'in_review' ? 'investigating' : status as Report['status'];
-    setReports(prev => prev.map(r => 
-      r.id === reportId ? { ...r, status: mappedStatus, updatedAt: new Date().toISOString() } : r
-    ));
-  };
-  const updateReportPriority = (reportId: string, priority: Report['priority'] | 1 | 2 | 3) => {
-    // Accept the Report['priority'] string union and also normalize legacy numeric priorities
-    const mapNumericToPriority = (p: 1 | 2 | 3): Report['priority'] => {
-      switch (p) {
-        case 1:
-          return 'low';
-        case 2:
-          return 'medium';
-        case 3:
-          return 'high';
-        default:
-          return 'low';
+
+    const isFavorite = favoriteEvents.some(f => {
+       const id = f.eventId || (f as any).event?.eventId;
+       return id === eventId;
+    });
+    
+    try {
+      if (isFavorite) {
+        await FavoriteService.removeFavorite(currentUser.id, eventId);
+        setFavoriteEvents(prev => prev.filter(f => {
+          const id = f.eventId || (f as any).event?.eventId;
+          return id !== eventId;
+        }));
+      } else {
+        const newFavorite = await FavoriteService.addFavorite(currentUser.id, eventId);
+        setFavoriteEvents(prev => [...prev, newFavorite]);
       }
-    };
-
-    const normalized: Report['priority'] = typeof priority === 'number' ? mapNumericToPriority(priority) : priority;
-
-    setReports(prev => prev.map(r => 
-      r.id === reportId ? { ...r, priority: normalized, updatedAt: new Date().toISOString() } : r
-    ));
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
   };
-  const openReportModal = (type: 'user' | 'ticket' | 'transaction' | 'event' | 'other', id: string, name: string) => {
+
+  const isEventFavorite = (eventId: string) => {
+    return favoriteEvents.some(f => {
+       const id = f.eventId || (f as any).event?.eventId;
+       return id === eventId;
+    });
+  };
+
+  // --- Messaging Logic ---
+  const handleContactSeller = async (sellerId: string) => {
     if (!currentUser) {
       setShowLoginModal(true);
       return;
     }
-    setReportContext({ type, id, name });
-    setShowReportModal(true);
+    try {
+      const conversation = await InteractionService.createConversation(sellerId);
+      setActiveConversationId(conversation.id);
+      setShowMessaging(true);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+    }
   };
-  const sendMessage = (conversationId: string, content: string) => {
-    if (!currentUser) return;
-    const conversation = conversations.find(c => c.id === conversationId);
-    if (!conversation) return;
-    const receiverId = conversation.participants.find(id => id !== currentUser.id);
-    if (!receiverId) return;
-    const messageData = MessageService.createMessage(conversationId, currentUser.id, receiverId, content);
-    const message: Message = {
-      id: NotificationService.generateMessageId(),
-      date: new Date().toISOString(),
-      ...messageData
-    };
-    setMessages(prev => [...prev, message]);
-    setConversations(prev => prev.map(c => 
-      c.id === conversationId 
-        ? { ...c, lastMessage: message, updatedAt: new Date().toISOString() }
-        : c
-    ));
-  };
-  const createConversation = (participantId: string, ticketId?: string) => {
-    if (!currentUser) return;
-    const conversationData = MessageService.createConversation(
-      [currentUser.id, participantId],
-      ticketId,
-      ticketId ? tickets.find(t => t.id === ticketId)?.eventId : undefined
-    );
-    const conversation: Conversation = {
-      id: NotificationService.generateConversationId(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ...conversationData
-    };
-    setConversations(prev => [conversation, ...prev]);
-    return conversation.id;
-  };
-  const markMessageAsRead = (messageId: string) => {
-    setMessages(prev => prev.map(m => 
-      m.id === messageId ? { ...m, read: true } : m
-    ));
-  };
-  // ... (fin de la logique de service fictive) ...
 
   const userNotifications = currentUser ? notifications.filter(n => n.userId === currentUser.id) : [];
-  const userFavorites = currentUser ? favoriteEvents.filter(f => f.userId === currentUser.id) : [];
-  const userConversations = currentUser ? conversations.filter(c => c.participants.includes(currentUser.id)) : [];
 
-  const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : null;
-
-  // === AJOUT ===
-  // Affiche un écran de chargement pendant que l'on vérifie le token
   if (authLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -310,51 +247,35 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
       </View>
     );
   }
-  // =============
 
   const renderContent = () => {
-    // ... (votre switch/case reste identique) ...
     switch (currentView) {
       case 'home':
         return (
           <HomeScreen
-            // events={events}
             onViewEvent={handleViewEvent}
             onNavigateToEvents={() => setCurrentView('events')}
           />
         );
-    case 'events':
+      case 'events':
         return (
           <EventList 
-            // EventList gère maintenant son propre chargement de données via le Service
-            // Mais si vous passez des props, assurez-vous qu'elles matchent
-            // Si EventList est autonome (comme codé précédemment), vous n'avez peut-être plus besoin de passer 'events' ici
-            // Vérifiez la signature de votre composant EventList mis à jour.
-            // Si EventList attend des props:
-            /* events={events} */
             onViewEvent={handleViewEvent}
-           /* onSellTicket={handleSellTicket}
-            */
           />
         );
-    case 'event-detail':
-        // Plus besoin de vérifier selectedEvent ici
+      case 'event-detail':
         if (!selectedEventId) return null; 
-        
         return (
           <EventDetail 
-            eventId={selectedEventId} // On passe juste l'ID
-            //onBuyTicket={handleBuyTicket}
+            eventId={selectedEventId}
+            isFavorite={isEventFavorite(selectedEventId)}
+            onToggleFavorite={() => toggleFavorite(selectedEventId)}
             onViewTickets={(id) => setCurrentView('event-tickets')}
             onBack={() => setCurrentView('events')}
-            // Retirer tickets={...} car EventDetail les charge lui-même
           />
         );
-
       case 'event-tickets':
-        // Sécurité : Si on refresh et qu'on perd l'ID, on ne peut pas afficher la liste
         if (!selectedEventId) return null; 
-        
         return (
           <EventTickets 
             eventId={selectedEventId}
@@ -363,13 +284,15 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
         );
       case 'profile':
         if (!currentUser) {
-          // Si l'utilisateur arrive ici sans être connecté (ne devrait pas arriver), 
-          // on le redirige ou on n'affiche rien.
           setCurrentView('home');
           return null;
         }
         return (
-          <UserProfile />
+          <UserProfile 
+            onViewEvent={handleViewEvent} 
+            initialTab={profileInitialTab}
+            onContactSeller={handleContactSeller}
+          />
         );
       case 'admin':
         if (!currentUser || currentUser.role !== 'ADMIN') {
@@ -377,10 +300,7 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
           return null;
         }
         return (
-          <AdminPanel 
-            // Vous n'avez plus besoin de passer ces props si AdminPanel est autonome via AdminService
-            // Sinon, adaptez selon votre implémentation de AdminPanel
-          />
+          <AdminPanel />
         );
       case 'admin-dashboard':
         if (!currentUser || currentUser.role !== 'ADMIN') {
@@ -399,55 +319,36 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         
         <Header 
-          currentUser={currentUser} // Passe le vrai utilisateur (ou null)
+          currentUser={currentUser}
           onLogin={() => setShowLoginModal(true)}
-          onLogout={handleLogout} // Passe la nouvelle fonction de logout
-          onNavigate={setCurrentView}
+          onLogout={handleLogout}
+          onNavigate={(view) => {
+            if (view === 'profile') setProfileInitialTab('profile');
+            setCurrentView(view);
+          }}
           currentView={currentView}
           notificationCount={userNotifications.filter(n => !n.read).length}
-          messageCount={userConversations.filter(c => {
-            const convMessages = messages.filter(m => m.conversationId === c.id);
-            return convMessages.some(msg => !msg.read && msg.senderId !== currentUser?.id);
-          }).length}
+          messageCount={unreadMessageCount}
           onShowNotifications={() => setShowNotifications(true)}
-          onShowMessages={() => setShowMessaging(true)}
-          onShowFavorites={() => setShowFavorites(true)}
+          onShowMessages={() => {
+            setActiveConversationId(null);
+            setShowMessaging(true);
+          }}
+          onShowFavorites={() => {
+            setProfileInitialTab('favorites');
+            setCurrentView('profile');
+          }}
         />
 
-        <View style={styles.content} /*showsVerticalScrollIndicator={false}*/>
+        <View style={styles.content}>
           {renderContent()}
         </View>
 
-        {/* Modals */}
         <LoginModal 
           visible={showLoginModal}
           onClose={() => setShowLoginModal(false)}
         />
 
-        {/* ... (tous vos autres modals restent identiques) ... */}
-        <SellTicketModal 
-          visible={showSellModal}
-          event={events.find(e => e.id === selectedEventId) || null}
-          //onSell={handleTicketListing}
-          onSuccess={() => void 0}
-          onClose={() => setShowSellModal(false)}
-        />
-
-        {selectedTicket && (
-          <BuyTicketModal 
-            visible={showBuyModal}
-            ticket={selectedTicket}
-            event={events.find(e => e.id === selectedTicket.eventId)!}
-            //onBuy={() => handleTicketPurchase(selectedTicket.id)}
-            onSuccess={() => void 0}
-            onClose={() => {
-              setShowBuyModal(false);
-              setSelectedTicket(null);
-            }}
-          />
-        )}
-
-        {/* Nouveaux modals */}
         <NotificationCenter
           visible={showNotifications}
           onClose={() => setShowNotifications(false)}
@@ -457,49 +358,15 @@ const [currentView, setCurrentView] = useState<'home' | 'events' | 'event-detail
           onDeleteNotification={deleteNotification}
         />
 
-        <MessagingCenter
-          visible={showMessaging}
-          onClose={() => setShowMessaging(false)}
-          conversations={userConversations}
-          messages={messages}
-          currentUser={currentUser!}
-          users={users}
-          onSendMessage={sendMessage}
-          onCreateConversation={createConversation}
-          onMarkAsRead={markMessageAsRead}
-        />
-
-        <FavoritesManager
-          visible={showFavorites}
-          onClose={() => setShowFavorites(false)}
-          favoriteEvents={userFavorites}
-          events={events}
-          onRemoveFavorite={removeFavorite}
-          onViewEvent={handleViewEvent}
-        />
-
-        {reportContext && (
-          <ReportModal
-            visible={showReportModal}
+        {currentUser && (
+          <MessagingCenter
+            visible={showMessaging}
             onClose={() => {
-              setShowReportModal(false);
-              setReportContext(null);
+              setShowMessaging(false);
+              setActiveConversationId(null);
             }}
-            reportType={reportContext.type}
-            reportedId={reportContext.id}
-            reportedName={reportContext.name}
-            onSubmitReport={submitReport}
-            currentUserId={currentUser?.id || ''}
-          />
-        )}
-
-        {currentUser?.role === 'ADMIN' && (
-          <ReportManagement
-            visible={showReportManagement}
-            onClose={() => setShowReportManagement(false)}
-            reports={reports}
-            onUpdateReportStatus={updateReportStatus}
-            onUpdateReportPriority={updateReportPriority}
+            currentUser={currentUser}
+            initialConversationId={activeConversationId}
           />
         )}
       </View>
@@ -515,7 +382,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  // Style pour l'écran de chargement
   loadingContainer: {
     flex: 1,
     backgroundColor: '#f9fafb',
