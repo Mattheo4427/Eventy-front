@@ -7,6 +7,7 @@ export const ReportService = {
     reportedTransactionId?: string;
     reportType: 'SPAM' | 'FRAUD' | 'HARASSMENT' | 'INAPPROPRIATE_CONTENT' | 'OTHER';
     reason: string;
+    description?: string;
     evidence?: string;
   }): Promise<void> => {
     await api.post('/interactions/reports', data);

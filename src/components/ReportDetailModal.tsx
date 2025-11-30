@@ -238,6 +238,13 @@ export function ReportDetailModal({
                 <Text style={styles.label}>Motif :</Text>
                 <Text style={styles.textBlock}>{report.reason}</Text>
                 
+                {report.description && (
+                    <>
+                        <Text style={[styles.label, {marginTop: 12}]}>Description :</Text>
+                        <Text style={styles.textBlock}>{report.description}</Text>
+                    </>
+                )}
+
                 {report.evidence && (
                     <>
                         <Text style={[styles.label, {marginTop: 12}]}>Preuve :</Text>

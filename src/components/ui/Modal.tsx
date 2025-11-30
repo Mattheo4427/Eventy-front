@@ -18,6 +18,7 @@ export function CustomModal({ visible, onClose, title, children, contentStyle, .
       animationType="fade"
       transparent={true}
       onRequestClose={onClose}
+      presentationStyle="overFullScreen" // Helps with iOS modal stacking
       {...props}
     >
       <SafeAreaView style={styles.overlay}>

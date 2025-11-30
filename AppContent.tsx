@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, StatusBar, ActivityIndicator, Image, Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   Header,
@@ -25,7 +25,6 @@ import {
 import { FavoriteService } from './src/services/FavoriteService';
 import { InteractionService } from './src/services/InteractionService';
 import { useAuth } from './src/contexts/AuthContext';
-import { Alert } from 'react-native';
 
 // Notifications removed for Expo Go compatibility (requires Dev Build on Android SDK 53+)
 /*
@@ -243,7 +242,13 @@ export default function AppContent() {
   if (authLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <StatusBar barStyle="light-content" backgroundColor="#101116" />
+        <Image 
+          source={require('./assets/icon.png')} 
+          style={styles.loadingLogo}
+          resizeMode="contain"
+        />
+        <ActivityIndicator size="large" color="#3b82f6" style={styles.loadingIndicator} />
       </View>
     );
   }
@@ -384,8 +389,17 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#101116',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingLogo: {
+    width: 200,
+    height: 200,
+    marginBottom: 20,
+  },
+  loadingIndicator: {
+    position: 'absolute',
+    bottom: 50,
   }
 });

@@ -14,9 +14,10 @@ interface TransactionDetailModalProps {
   onClose: () => void;
   onSuccess?: () => void; // Callback pour rafraîchir
   mode?: 'admin' | 'user';
+  onViewTicket?: (ticketId: string) => void;
 }
 
-export function TransactionDetailModal({ visible, transaction, buyer, seller, onClose, onSuccess, mode = 'admin' }: TransactionDetailModalProps) {
+export function TransactionDetailModal({ visible, transaction, buyer, seller, onClose, onSuccess, mode = 'admin', onViewTicket }: TransactionDetailModalProps) {
   const [showReportModal, setShowReportModal] = useState(false);
 
   if (!transaction) return null;
@@ -161,7 +162,14 @@ export function TransactionDetailModal({ visible, transaction, buyer, seller, on
             <View style={styles.divider} />
             <View style={styles.row}>
               <Text style={styles.label}>ID Ticket</Text>
-              <Text style={[styles.value, styles.uuid]}>{transaction.ticketId}</Text>
+              <View style={{flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center'}}>
+                  <Text style={[styles.value, styles.uuid, {flex: 0, marginRight: 8}]}>{transaction.ticketId}</Text>
+                  {onViewTicket && (
+                      <TouchableOpacity onPress={() => onViewTicket(transaction.ticketId)}>
+                          <Ionicons name="open-outline" size={16} color="#2563eb" />
+                      </TouchableOpacity>
+                  )}
+              </View>
             </View>
           </View>
 

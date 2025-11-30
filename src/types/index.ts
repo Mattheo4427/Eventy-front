@@ -148,6 +148,7 @@ export interface Report {
 
   reportType: 'SPAM' | 'SCAM' | 'HARASSMENT' | 'OTHER';
   reason: string;
+  description?: string;
   evidence?: string;
   
   status: 'PENDING' | 'UNDER_INVESTIGATION' | 'RESOLVED' | 'DISMISSED';

@@ -48,6 +48,17 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
   const [sellingFilter, setSellingFilter] = useState<'ALL' | 'AVAILABLE' | 'SOLD'>('ALL');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Stock Filters
+  const [myTicketEvents, setMyTicketEvents] = useState<Map<string, Event>>(new Map());
+  const [showStockFilters, setShowStockFilters] = useState(false);
+  const [stockFilters, setStockFilters] = useState({
+    eventName: '',
+    minPrice: '',
+    maxPrice: '',
+    ticketType: '',
+    dateSort: 'DESC' as 'ASC' | 'DESC'
+  });
+
   // Modals
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -105,6 +116,16 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
       const tickets = await TicketService.getMyTickets(authUser.id);
       const uniqueMyTickets = Array.from(new Map(tickets.map(item => [item.id, item])).values());
       setMyTickets(uniqueMyTickets);
+
+      // Fetch events for my tickets to allow filtering
+      const eventIds = new Set(uniqueMyTickets.map(t => t.eventId).filter(Boolean));
+      const eventPromisesForMyTickets = Array.from(eventIds).map(eid => EventService.getEventById(eid).catch(() => null));
+      const eventsForMyTickets = await Promise.all(eventPromisesForMyTickets);
+      const eventMap = new Map<string, Event>();
+      eventsForMyTickets.forEach(e => {
+        if (e) eventMap.set(e.id, e);
+      });
+      setMyTicketEvents(eventMap);
 
       // 6. Récupérer les favoris
       try {
@@ -215,7 +236,29 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
     setShowTransactionModal(true);
   };
 
-  const renderTicketItem = ({ item, mode }: { item: Ticket, mode: 'owned' | 'selling' }) => (
+  const handleViewTicketFromTransaction = async (ticketId: string) => {
+      setShowTransactionModal(false);
+      setLoading(true);
+      try {
+          const ticket = await TicketService.getTicketById(ticketId);
+          if (ticket) {
+              handleTicketPress(ticket);
+          } else {
+              Alert.alert("Erreur", "Ticket introuvable");
+          }
+      } catch (error) {
+          console.error("Error fetching ticket from transaction", error);
+          Alert.alert("Erreur", "Impossible de charger le ticket");
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const renderTicketItem = ({ item, mode }: { item: Ticket, mode: 'owned' | 'selling' }) => {
+    const event = myTicketEvents.get(item.eventId);
+    const displayTitle = event?.name || `Ticket #${item.id.substring(0, 8)}`;
+
+    return (
     <TouchableOpacity onPress={() => handleTicketPress(item)} activeOpacity={0.7}>
       <View style={styles.card}>
         <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
@@ -228,7 +271,7 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
                     <Ionicons name="ticket" size={24} color={mode === 'owned' ? '#2563eb' : '#16a34a'} />
                 </View>
                 <View>
-                    <Text style={styles.cardTitle}>Ticket #{item.id.substring(0, 8)}</Text>
+                    <Text style={styles.cardTitle}>{displayTitle}</Text>
                     <Text style={styles.cardSubtitle}>
                         {item.ticketTypeLabel || 'Standard'} • {item.salePrice}€
                     </Text>
@@ -258,6 +301,7 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
       </View>
     </TouchableOpacity>
   );
+  };
 
   const renderTransactionItem = ({ item }: { item: Transaction & { isSale?: boolean } }) => {
     const isSale = item.isSale;
@@ -361,7 +405,7 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setActiveTab('tickets')} style={[styles.tab, activeTab === 'tickets' && styles.activeTab]}>
             <Ionicons name="ticket-outline" size={isSmallDevice ? 18 : 20} color={activeTab === 'tickets' ? '#2563eb' : '#6b7280'} style={{marginBottom: 4}} />
-            <Text style={[styles.tabText, activeTab === 'tickets' && styles.activeTabText]}>Activité</Text>
+            <Text style={[styles.tabText, activeTab === 'tickets' && styles.activeTabText]}>Tickets</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setActiveTab('favorites')} style={[styles.tab, activeTab === 'favorites' && styles.activeTab]}>
             <Ionicons name="heart-outline" size={isSmallDevice ? 18 : 20} color={activeTab === 'favorites' ? '#2563eb' : '#6b7280'} style={{marginBottom: 4}} />
@@ -576,7 +620,7 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
                     <Text style={[styles.subTabText, ticketTab === 'owned' && styles.activeSubTabText]}>Mes Billets</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setTicketTab('selling')} style={[styles.subTab, ticketTab === 'selling' && styles.activeSubTab]}>
-                    <Text style={[styles.subTabText, ticketTab === 'selling' && styles.activeSubTabText]}>Mes Ventes</Text>
+                    <Text style={[styles.subTabText, ticketTab === 'selling' && styles.activeSubTabText]}>Stocks</Text>
                 </TouchableOpacity>
             </View>
 
@@ -595,27 +639,120 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
                 </View>
             ) : (
                 <View>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 16}}>
-                        {(['ALL', 'AVAILABLE', 'SOLD'] as const).map(f => (
-                            <TouchableOpacity 
-                                key={f} 
-                                onPress={() => setSellingFilter(f)}
-                                style={[styles.filterChip, sellingFilter === f && styles.activeFilterChip]}
-                            >
-                                <Text style={[styles.filterText, sellingFilter === f && styles.activeFilterText]}>
-                                    {f === 'ALL' ? 'Tout' : f === 'AVAILABLE' ? 'En vente' : 'Vendu'}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                    {/* Filters Header */}
+                    <TouchableOpacity 
+                        style={{flexDirection: 'row', alignItems: 'center', marginBottom: 12, justifyContent: 'space-between'}} 
+                        onPress={() => setShowStockFilters(!showStockFilters)}
+                    >
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <Ionicons name={showStockFilters ? "chevron-down" : "chevron-forward"} size={20} color="#6b7280" />
+                            <Text style={{color: '#6b7280', fontWeight: '600', marginLeft: 4}}>Filtres & Tri</Text>
+                        </View>
+                        {(stockFilters.eventName || stockFilters.minPrice || stockFilters.maxPrice || stockFilters.ticketType) && (
+                             <TouchableOpacity onPress={() => setStockFilters({eventName: '', minPrice: '', maxPrice: '', ticketType: '', dateSort: 'DESC'})}>
+                                <Text style={{color: '#2563eb', fontSize: 12}}>Réinitialiser</Text>
+                             </TouchableOpacity>
+                        )}
+                    </TouchableOpacity>
+
+                    {showStockFilters && (
+                        <View style={{backgroundColor: '#fff', padding: 12, borderRadius: 12, marginBottom: 16}}>
+                            <Input 
+                                label="Événement" 
+                                placeholder="Rechercher un événement..."
+                                value={stockFilters.eventName}
+                                onChangeText={t => setStockFilters({...stockFilters, eventName: t})}
+                                style={{marginBottom: 8}}
+                            />
+                            <View style={{flexDirection: 'row', gap: 8}}>
+                                <View style={{flex: 1}}>
+                                    <Input 
+                                        label="Prix Min" 
+                                        placeholder="0"
+                                        keyboardType="numeric"
+                                        value={stockFilters.minPrice}
+                                        onChangeText={t => setStockFilters({...stockFilters, minPrice: t})}
+                                    />
+                                </View>
+                                <View style={{flex: 1}}>
+                                    <Input 
+                                        label="Prix Max" 
+                                        placeholder="1000"
+                                        keyboardType="numeric"
+                                        value={stockFilters.maxPrice}
+                                        onChangeText={t => setStockFilters({...stockFilters, maxPrice: t})}
+                                    />
+                                </View>
+                            </View>
+                            <Input 
+                                label="Type de ticket" 
+                                placeholder="Standard, VIP..."
+                                value={stockFilters.ticketType}
+                                onChangeText={t => setStockFilters({...stockFilters, ticketType: t})}
+                                style={{marginTop: 8}}
+                            />
+                            
+                            <View style={{marginTop: 12}}>
+                                <Text style={{fontSize: 12, color: '#6b7280', marginBottom: 8}}>Trier par date</Text>
+                                <View style={{flexDirection: 'row', gap: 8}}>
+                                    <TouchableOpacity 
+                                        onPress={() => setStockFilters({...stockFilters, dateSort: 'DESC'})}
+                                        style={[styles.filterChip, stockFilters.dateSort === 'DESC' && styles.activeFilterChip]}
+                                    >
+                                        <Text style={[styles.filterText, stockFilters.dateSort === 'DESC' && styles.activeFilterText]}>Plus récent</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        onPress={() => setStockFilters({...stockFilters, dateSort: 'ASC'})}
+                                        style={[styles.filterChip, stockFilters.dateSort === 'ASC' && styles.activeFilterChip]}
+                                    >
+                                        <Text style={[styles.filterText, stockFilters.dateSort === 'ASC' && styles.activeFilterText]}>Plus ancien</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    )}
 
                     {myTickets
-                        .filter(t => sellingFilter === 'ALL' || t.status === sellingFilter)
+                        .filter(t => {
+                            if (t.status !== 'AVAILABLE') return false;
+                            if (stockFilters.eventName) {
+                                const evt = myTicketEvents.get(t.eventId);
+                                if (!evt?.name.toLowerCase().includes(stockFilters.eventName.toLowerCase())) return false;
+                            }
+                            if (stockFilters.minPrice && t.salePrice < parseFloat(stockFilters.minPrice)) return false;
+                            if (stockFilters.maxPrice && t.salePrice > parseFloat(stockFilters.maxPrice)) return false;
+                            if (stockFilters.ticketType && !t.ticketTypeLabel?.toLowerCase().includes(stockFilters.ticketType.toLowerCase())) return false;
+                            return true;
+                        })
+                        .sort((a, b) => {
+                            const evtA = myTicketEvents.get(a.eventId);
+                            const evtB = myTicketEvents.get(b.eventId);
+                            const dateA = evtA ? new Date(evtA.startDate).getTime() : (a.creationDate ? new Date(a.creationDate).getTime() : 0);
+                            const dateB = evtB ? new Date(evtB.startDate).getTime() : (b.creationDate ? new Date(b.creationDate).getTime() : 0);
+                            return stockFilters.dateSort === 'ASC' ? dateA - dateB : dateB - dateA;
+                        })
                         .length === 0 ? (
-                        <Text style={styles.emptyText}>Aucun ticket trouvé</Text>
+                        <Text style={styles.emptyText}>Aucun ticket en vente trouvé</Text>
                     ) : (
                         myTickets
-                            .filter(t => sellingFilter === 'ALL' || t.status === sellingFilter)
+                            .filter(t => {
+                                if (t.status !== 'AVAILABLE') return false;
+                                if (stockFilters.eventName) {
+                                    const evt = myTicketEvents.get(t.eventId);
+                                    if (!evt?.name.toLowerCase().includes(stockFilters.eventName.toLowerCase())) return false;
+                                }
+                                if (stockFilters.minPrice && t.salePrice < parseFloat(stockFilters.minPrice)) return false;
+                                if (stockFilters.maxPrice && t.salePrice > parseFloat(stockFilters.maxPrice)) return false;
+                                if (stockFilters.ticketType && !t.ticketTypeLabel?.toLowerCase().includes(stockFilters.ticketType.toLowerCase())) return false;
+                                return true;
+                            })
+                            .sort((a, b) => {
+                                const evtA = myTicketEvents.get(a.eventId);
+                                const evtB = myTicketEvents.get(b.eventId);
+                                const dateA = evtA ? new Date(evtA.startDate).getTime() : (a.creationDate ? new Date(a.creationDate).getTime() : 0);
+                                const dateB = evtB ? new Date(evtB.startDate).getTime() : (b.creationDate ? new Date(b.creationDate).getTime() : 0);
+                                return stockFilters.dateSort === 'ASC' ? dateA - dateB : dateB - dateA;
+                            })
                             .map(t => (
                             <View key={t.id} style={{marginBottom: 8}}>
                                 {renderTicketItem({item: t, mode: 'selling'})}
@@ -663,6 +800,7 @@ export function UserProfile({ onViewEvent, initialTab = 'profile', onContactSell
         transaction={selectedTransaction}
         onClose={() => setShowTransactionModal(false)}
         mode="user"
+        onViewTicket={handleViewTicketFromTransaction}
       />
     </View>
   );

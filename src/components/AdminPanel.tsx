@@ -368,6 +368,18 @@ export function AdminPanel() {
     );
   };
 
+  const handleViewTicketFromTransaction = (ticketId: string) => {
+      setShowTransModal(false);
+      setTimeout(() => {
+          const ticket = tickets.find(t => t.id === ticketId);
+          if (ticket) {
+              openTicketDetail(ticket);
+          } else {
+              Alert.alert("Erreur", "Ticket introuvable dans les données chargées.");
+          }
+      }, 500);
+  };
+
 
   // --- RENDU ITEMS ---
 
@@ -609,6 +621,10 @@ export function AdminPanel() {
           
           <Text style={{ fontSize: 13, color: '#374151', marginBottom: 8, fontStyle: 'italic' }} numberOfLines={2}>"{item.reason}"</Text>
           
+          {item.description ? (
+             <Text style={{ fontSize: 12, color: '#4b5563', marginBottom: 8 }} numberOfLines={2}>{item.description}</Text>
+          ) : null}
+
           {item.evidence ? (
              <Text style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }} numberOfLines={1}>Preuve: {item.evidence}</Text>
           ) : null}
@@ -796,6 +812,7 @@ export function AdminPanel() {
         })() : undefined}
         onClose={() => setShowTransModal(false)}
         onSuccess={loadData}
+        onViewTicket={handleViewTicketFromTransaction}
       />
       <TicketDetailModal 
         visible={showTicketModal}

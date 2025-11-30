@@ -9,6 +9,8 @@ import { TicketService } from '../services/TicketService';
 import { useAuth } from '../contexts/AuthContext';
 import { BuyTicketModal } from './BuyTicketModal'; // Import du Modal
 import { CreateReportModal } from './CreateReportModal';
+import { InteractionService } from '../services/InteractionService';
+import { MessagingCenter } from './MessagingCenter';
 
 interface EventTicketsProps {
   eventId: string;
@@ -17,7 +19,7 @@ interface EventTicketsProps {
 
 export function EventTickets({ eventId, onBack }: EventTicketsProps) {
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -35,6 +37,10 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
   // États pour le Modal de signalement
   const [showReportModal, setShowReportModal] = useState(false);
   const [ticketToReport, setTicketToReport] = useState<Ticket | null>(null);
+
+  // États pour la messagerie
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   const loadData = async (showLoader = true) => {
     try {
@@ -88,6 +94,21 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
     }
     setSelectedTicket(ticket);
     setShowBuyModal(true);
+  };
+
+  const handleContactSeller = async (sellerId: string) => {
+    if (!isAuthenticated) {
+      Alert.alert("Connexion requise", "Vous devez être connecté pour contacter le vendeur.");
+      return;
+    }
+    try {
+      const conversation = await InteractionService.createConversation(sellerId);
+      setActiveConversationId(conversation.id);
+      setShowMessaging(true);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      Alert.alert("Erreur", "Impossible de contacter le vendeur.");
+    }
   };
 
   const getTypeColor = (label: string) => {
@@ -209,6 +230,11 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
                   <View style={styles.sellerRow}>
                       <Ionicons name="person-circle-outline" size={16} color="#9ca3af" />
                       <Text style={styles.sellerName}>Vendu par {ticket.sellerName || 'Utilisateur'}</Text>
+                      {ticket.vendorId !== user?.id && (
+                        <TouchableOpacity onPress={() => handleContactSeller(ticket.vendorId)} style={styles.contactButton}>
+                          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#2563eb" />
+                        </TouchableOpacity>
+                      )}
                   </View>
               </View>
 
@@ -261,6 +287,18 @@ export function EventTickets({ eventId, onBack }: EventTicketsProps) {
             targetType="TICKET" 
             targetId={ticketToReport.id}
             targetName={`Billet ${ticketToReport.ticketTypeLabel || 'Standard'} - ${event?.name || 'Événement'}`}
+        />
+      )}
+
+      {user && (
+        <MessagingCenter
+          visible={showMessaging}
+          onClose={() => {
+            setShowMessaging(false);
+            setActiveConversationId(null);
+          }}
+          currentUser={user}
+          initialConversationId={activeConversationId}
         />
       )}
     </View>
@@ -351,7 +389,8 @@ const styles = StyleSheet.create({
   verticalDivider: { width: 1, height: 20, backgroundColor: '#e2e8f0', marginHorizontal: 12 },
 
   sellerRow: { flexDirection: 'row', alignItems: 'center' },
-  sellerName: { fontSize: 12, color: '#64748b', marginLeft: 6 },
+  sellerName: { fontSize: 12, color: '#64748b', marginLeft: 6, marginRight: 8 },
+  contactButton: { padding: 4 },
 
   // Ticket Action Side
   ticketAction: { width: 100, padding: 12, justifyContent: 'center', alignItems: 'center' },

@@ -5,6 +5,9 @@ import { Button } from './ui/Button';
 import { Conversation, Message, User } from '../types';
 import { InteractionService } from '../services/InteractionService';
 import { UserService } from '../services/UserService';
+import { ReportForm } from './ReportSystem';
+import { ReportService } from '../services/ReportService';
+import { Alert } from 'react-native';
 
 interface MessagingCenterProps {
   visible: boolean;
@@ -25,6 +28,7 @@ export const MessagingCenter: React.FC<MessagingCenterProps> = ({
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [participants, setParticipants] = useState<Record<string, User>>({});
+  const [showReportModal, setShowReportModal] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   
   const screenHeight = Dimensions.get('window').height;
@@ -153,6 +157,23 @@ export const MessagingCenter: React.FC<MessagingCenterProps> = ({
       } catch (e) {
         console.error("Error sending message:", e);
       }
+    }
+  };
+
+  const handleReportSubmit = async (reportData: any) => {
+    try {
+      await ReportService.createReport({
+        reportedUserId: reportData.reportedId,
+        reportType: reportData.reportType,
+        reason: reportData.reason,
+        description: reportData.description,
+        evidence: reportData.evidence
+      });
+      
+      setShowReportModal(false);
+    } catch (error) {
+      console.error("Report error:", error);
+      throw error; // Let ReportModal handle the error alert
     }
   };
 
@@ -291,83 +312,101 @@ export const MessagingCenter: React.FC<MessagingCenterProps> = ({
     <CustomModal 
       visible={visible} 
       onClose={onClose} 
-      title={`Conversation`}
+      title={showReportModal ? `Signaler l'utilisateur` : `Conversation`}
       contentStyle={{ padding: 0, height: chatHeight }} // Use calculated height
     >
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-      >
-        <View style={styles.chatHeader}>
-          <TouchableOpacity
-            onPress={() => setSelectedConversation(null)}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <Avatar id={otherId} size={32} />
-          <Text style={styles.chatTitle}>{getParticipantName(otherId)}</Text>
-        </View>
-
-        <ScrollView 
-          style={styles.messagesContainer}
-          contentContainerStyle={{ padding: 16 }} // Add padding inside scrollview instead
-          ref={scrollViewRef}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+      {showReportModal ? (
+        <ReportForm
+          reportType="user"
+          reportedId={otherId}
+          reportedName={getParticipantName(otherId)}
+          currentUserId={currentUser.id}
+          onSubmitReport={handleReportSubmit}
+          onCancel={() => setShowReportModal(false)}
+          fullHeight={true}
+        />
+      ) : (
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.container}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
         >
-          {messages.map((message) => {
-            const isOwn = message.senderId === currentUser.id;
-            return (
-              <View
-                key={message.id}
-                style={[
-                  styles.messageWrapper,
-                  isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper
-                ]}
-              >
-                {!isOwn && <Avatar id={message.senderId} size={28} />}
+          <View style={styles.chatHeader}>
+            <TouchableOpacity
+              onPress={() => setSelectedConversation(null)}
+              style={styles.backButton}
+            >
+              <Text style={styles.backButtonText}>←</Text>
+            </TouchableOpacity>
+            <Avatar id={otherId} size={32} />
+            <Text style={styles.chatTitle}>{getParticipantName(otherId)}</Text>
+            <TouchableOpacity 
+              onPress={() => setShowReportModal(true)}
+              style={styles.reportButton}
+            >
+              <Text style={styles.reportButtonText}>⚠️</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            style={styles.messagesContainer}
+            contentContainerStyle={{ padding: 16 }} // Add padding inside scrollview instead
+            ref={scrollViewRef}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          >
+            {messages.map((message) => {
+              const isOwn = message.senderId === currentUser.id;
+              return (
                 <View
+                  key={message.id}
                   style={[
-                    styles.messageItem,
-                    isOwn ? styles.ownMessage : styles.otherMessage
+                    styles.messageWrapper,
+                    isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper
                   ]}
                 >
-                  <Text style={[
-                    styles.messageContent,
-                    isOwn ? styles.ownMessageText : styles.otherMessageText
-                  ]}>
-                    {message.content}
-                  </Text>
-                  <Text style={[
-                    styles.messageTime,
-                    isOwn ? styles.ownMessageTime : styles.otherMessageTime
-                  ]}>
-                    {formatMessageTime(message.dateSent)}
-                  </Text>
+                  {!isOwn && <Avatar id={message.senderId} size={28} />}
+                  <View
+                    style={[
+                      styles.messageItem,
+                      isOwn ? styles.ownMessage : styles.otherMessage
+                    ]}
+                  >
+                    <Text style={[
+                      styles.messageContent,
+                      isOwn ? styles.ownMessageText : styles.otherMessageText
+                    ]}>
+                      {message.content}
+                    </Text>
+                    <Text style={[
+                      styles.messageTime,
+                      isOwn ? styles.ownMessageTime : styles.otherMessageTime
+                    ]}>
+                      {formatMessageTime(message.dateSent)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            );
-          })}
-        </ScrollView>
+              );
+            })}
+          </ScrollView>
 
-        <View style={styles.messageInput}>
-          <TextInput
-            style={styles.textInput}
-            value={newMessage}
-            onChangeText={setNewMessage}
-            placeholder="Tapez votre message..."
-            multiline
-            maxLength={500}
-          />
-          <Button
-            title="Envoyer"
-            onPress={handleSendMessage}
-            disabled={!newMessage.trim()}
-            size="sm"
-          />
-        </View>
-      </KeyboardAvoidingView>
+          <View style={styles.messageInput}>
+            <TextInput
+              style={styles.textInput}
+              value={newMessage}
+              onChangeText={setNewMessage}
+              placeholder="Tapez votre message..."
+              multiline
+              maxLength={500}
+            />
+            <Button
+              title="Envoyer"
+              onPress={handleSendMessage}
+              disabled={!newMessage.trim()}
+              size="sm"
+            />
+          </View>
+        </KeyboardAvoidingView>
+      )}
     </CustomModal>
   );
 };
@@ -492,6 +531,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     flex: 1,
+  },
+  reportButton: {
+    padding: 8,
+  },
+  reportButtonText: {
+    fontSize: 20,
   },
   messagesContainer: {
     flex: 1,
