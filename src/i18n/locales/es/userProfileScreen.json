@@ -1,0 +1,21 @@
+{
+  "title": "Perfil de usuario",
+  "role_admin": "Administrador",
+  "role_user": "Usuario",
+  "stats_tickets_for_sale": "Entradas en venta",
+  "stats_tickets_sold": "Entradas vendidas",
+  "stats_total_sold": "Total vendido",
+  "tickets_title": "Mis entradas en venta",
+  "tickets_event_unknown": "Evento desconocido",
+  "tickets_section": "Sección",
+  "tickets_row": "Fila",
+  "tickets_seat": "Asiento",
+  "tickets_description": "Descripción",
+  "tickets_date": "Fecha",
+  "tickets_location": "Ubicación",
+  "empty_title": "No hay entradas en venta",
+  "empty_text": "Aún no has puesto ninguna entrada a la venta",
+  "status_available": "Disponible",
+  "status_sold": "Vendida",
+  "status_pending": "Pendiente"
+}

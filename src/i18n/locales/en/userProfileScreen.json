@@ -1,0 +1,21 @@
+{
+  "title": "User Profile",
+  "role_admin": "Administrator",
+  "role_user": "User",
+  "stats_tickets_for_sale": "Tickets for sale",
+  "stats_tickets_sold": "Tickets sold",
+  "stats_total_sold": "Total sold",
+  "tickets_title": "My tickets for sale",
+  "tickets_event_unknown": "Unknown event",
+  "tickets_section": "Section",
+  "tickets_row": "Row",
+  "tickets_seat": "Seat",
+  "tickets_description": "Description",
+  "tickets_date": "Date",
+  "tickets_location": "Location",
+  "empty_title": "No tickets for sale",
+  "empty_text": "You haven't put any tickets for sale yet",
+  "status_available": "Available",
+  "status_sold": "Sold",
+  "status_pending": "Pending"
+}
