@@ -10,7 +10,7 @@ interface HeaderProps {
   currentUser: User | null;
   onLogin: () => void;
   onLogout: () => void;
-  onNavigate: (view: 'home' | 'events' | 'profile' | 'admin') => void;
+  onNavigate: (view: 'home' | 'events' | 'profile' | 'admin' | 'admin-dashboard') => void;
   currentView: string;
   notificationCount?: number;
   messageCount?: number;
@@ -34,7 +34,7 @@ export function Header({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { t } = useTranslation();
 
-  const handleNavigate = (view: 'home' | 'events' | 'profile' | 'admin') => {
+  const handleNavigate = (view: 'home' | 'events' | 'profile' | 'admin' | 'admin-dashboard') => {
     onNavigate(view);
     setIsDrawerOpen(false);
   };
@@ -62,7 +62,7 @@ export function Header({
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         {/* Logo */}
         <TouchableOpacity 
@@ -167,12 +167,20 @@ export function Header({
                 )}
                 
                 {currentUser?.role === 'ADMIN' && (
-                  <NavigationItem
-                    title={t('administration', { ns: 'navigation' })}
-                    onPress={() => handleNavigate('admin')}
-                    isActive={currentView === 'admin'}
-                    icon="settings-outline"
-                  />
+                  <>
+                    <NavigationItem
+                      title={t('administration', { ns: 'navigation' })}
+                      onPress={() => handleNavigate('admin')}
+                      isActive={currentView === 'admin'}
+                      icon="settings-outline"
+                    />
+                    <NavigationItem
+                      title="Tableau de bord"
+                      onPress={() => handleNavigate('admin-dashboard')}
+                      isActive={currentView === 'admin-dashboard'}
+                      icon="stats-chart-outline"
+                    />
+                  </>
                 )}
               </View>
 
@@ -244,7 +252,7 @@ export function Header({
                     <View style={styles.userInfo}>
                       <Ionicons name="person-circle-outline" size={32} color="#6b7280" />
                       <View style={styles.userDetails}>
-                        <Text style={styles.userName}>{currentUser.name}</Text>
+                        <Text style={styles.userName}>{currentUser.firstName} {currentUser.lastName}</Text>
                         <Text style={styles.userEmail}>{currentUser.email}</Text>
                       </View>
                     </View>
@@ -298,8 +306,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 64,
+    paddingVertical: 8,
+    minHeight: 50,
   },
   logo: {
     flex: 0,

@@ -241,24 +241,3 @@ export class ReportService {
     return 'medium';
   }
 }
-
-export class FavoriteService {
-  static createFavorite(
-    userId: string,
-    eventId: string
-  ): Omit<FavoriteEvent, 'id'> {
-    return {
-      userId,
-      eventId,
-      addedAt: new Date().toISOString()
-    };
-  }
-
-  static isFavorite(favorites: FavoriteEvent[], userId: string, eventId: string): boolean {
-    return favorites.some(fav => fav.userId === userId && fav.eventId === eventId);
-  }
-
-  static removeFavorite(favorites: FavoriteEvent[], userId: string, eventId: string): FavoriteEvent[] {
-    return favorites.filter(fav => !(fav.userId === userId && fav.eventId === eventId));
-  }
-}

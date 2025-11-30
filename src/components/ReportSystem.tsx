@@ -4,108 +4,107 @@ import { CustomModal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Report } from '../types';
 
-interface ReportModalProps {
-  visible: boolean;
-  onClose: () => void;
+interface ReportFormProps {
   reportType: 'user' | 'ticket' | 'transaction' | 'event' | 'other';
   reportedId: string;
   reportedName: string;
   onSubmitReport: (report: Omit<Report, 'id' | 'createdAt' | 'updatedAt'>) => void;
   currentUserId: string;
+  onCancel: () => void;
+  fullHeight?: boolean;
 }
 
-export const ReportModal: React.FC<ReportModalProps> = ({
-  visible,
-  onClose,
+export const ReportForm: React.FC<ReportFormProps> = ({
   reportType,
   reportedId,
   reportedName,
   onSubmitReport,
-  currentUserId
+  currentUserId,
+  onCancel,
+  fullHeight = false
 }) => {
-  const [selectedReason, setSelectedReason] = useState<string>('');
+  const [selectedProblemType, setSelectedProblemType] = useState<string>('');
   const [description, setDescription] = useState('');
+  const [evidence, setEvidence] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getReportReasons = () => {
     switch (reportType) {
       case 'user':
         return [
-          'Comportement inapproprié',
-          'Spam ou publicité',
-          'Contenu offensant',
-          'Arnaque ou fraude',
-          'Usurpation d\'identité',
-          'Autre'
+          { label: 'Spam', value: 'SPAM' },
+          { label: 'Arnaque', value: 'FRAUD' },
+          { label: 'Harcèlement', value: 'HARASSMENT' },
+          { label: 'Contenu inapproprié', value: 'INAPPROPRIATE_CONTENT' },
+          { label: 'Autre', value: 'OTHER' }
         ];
       case 'ticket':
         return [
-          'Prix excessif',
-          'Billet suspect ou faux',
-          'Information incorrecte',
-          'Vente multiple du même billet',
-          'Autre'
+          { label: 'Prix excessif', value: 'FRAUD' },
+          { label: 'Billet suspect ou faux', value: 'FRAUD' },
+          { label: 'Information incorrecte', value: 'OTHER' },
+          { label: 'Vente multiple du même billet', value: 'FRAUD' },
+          { label: 'Autre', value: 'OTHER' }
         ];
       case 'transaction':
         return [
-          'Paiement non reçu',
-          'Billet non livré',
-          'Billet invalide',
-          'Remboursement non effectué',
-          'Autre'
+          { label: 'Paiement non reçu', value: 'FRAUD' },
+          { label: 'Billet non livré', value: 'FRAUD' },
+          { label: 'Billet invalide', value: 'FRAUD' },
+          { label: 'Remboursement non effectué', value: 'FRAUD' },
+          { label: 'Autre', value: 'OTHER' }
         ];
       case 'event':
         return [
-          'Événement annulé non signalé',
-          'Informations incorrectes',
-          'Contenu inapproprié',
-          'Autre'
+          { label: 'Événement annulé non signalé', value: 'OTHER' },
+          { label: 'Informations incorrectes', value: 'OTHER' },
+          { label: 'Contenu inapproprié', value: 'INAPPROPRIATE_CONTENT' },
+          { label: 'Autre', value: 'OTHER' }
         ];
       default:
         return [
-          'Problème technique',
-          'Contenu inapproprié',
-          'Autre'
+          { label: 'Problème technique', value: 'OTHER' },
+          { label: 'Contenu inapproprié', value: 'INAPPROPRIATE_CONTENT' },
+          { label: 'Autre', value: 'OTHER' }
         ];
-    }
-  };
-
-  const getReportTitle = () => {
-    switch (reportType) {
-      case 'user': return `Signaler l'utilisateur: ${reportedName}`;
-      case 'ticket': return `Signaler le billet: ${reportedName}`;
-      case 'transaction': return `Signaler la transaction: ${reportedName}`;
-      case 'event': return `Signaler l'événement: ${reportedName}`;
-      default: return 'Signaler un problème';
     }
   };
 
   const handleSubmit = async () => {
-    if (!selectedReason || !description.trim()) {
-      Alert.alert('Erreur', 'Veuillez sélectionner une raison et fournir une description.');
+    if (!selectedProblemType || !description.trim()) {
+      Alert.alert('Erreur', 'Veuillez sélectionner un type de problème et fournir une description.');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Find the label for the selected value to use as part of the description if needed, 
+      // or just send the Enum as reportType.
+      // The requirement is to align with CreateReportModal:
+      // reportType = Enum
+      // reason = Description Text
+      
       await onSubmitReport({
         reporterId: currentUserId,
-        reportedType: reportType,
+        reportedType: reportType, // Entity type (user, ticket...) - kept for compatibility if used elsewhere
         reportedId,
-        reason: selectedReason,
-        description: description.trim(),
+        reportType: selectedProblemType as any, // The Enum
+        reason: description.trim(), // The text description becomes the reason
+        description: description.trim(), // Redundant but keeping it
+        evidence: evidence.trim(),
         status: 'pending',
         priority: 'medium'
-      });
+      } as any); // Cast to any to avoid strict type checks on reportedType if it's not in interface
       
       Alert.alert(
         'Signalement envoyé',
         'Votre signalement a été transmis à nos équipes. Nous examinerons votre demande dans les plus brefs délais.',
-        [{ text: 'OK', onPress: onClose }]
+        [{ text: 'OK', onPress: onCancel }]
       );
       
-      setSelectedReason('');
+      setSelectedProblemType('');
       setDescription('');
+      setEvidence('');
     } catch (error) {
       Alert.alert('Erreur', 'Une erreur est survenue lors de l\'envoi du signalement.');
     } finally {
@@ -114,35 +113,38 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   return (
-    <CustomModal visible={visible} onClose={onClose} title={getReportTitle()}>
-      <View style={styles.container}>
+    <View style={[styles.container, fullHeight ? styles.fullHeightContainer : styles.autoHeightContainer]}>
+      <ScrollView 
+        style={fullHeight ? styles.fullHeightScroll : styles.autoHeightScroll} 
+        contentContainerStyle={styles.scrollContentContainer}
+      >
         <Text style={styles.subtitle}>
           Aidez-nous à maintenir une communauté sûre en signalant les problèmes.
         </Text>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Raison du signalement *</Text>
+          <Text style={styles.sectionTitle}>Type de problème *</Text>
           <View style={styles.reasonsList}>
-            {getReportReasons().map((reason) => (
+            {getReportReasons().map((item) => (
               <TouchableOpacity
-                key={reason}
+                key={item.label}
                 style={[
                   styles.reasonItem,
-                  selectedReason === reason && styles.selectedReason
+                  selectedProblemType === item.value && styles.selectedReason
                 ]}
-                onPress={() => setSelectedReason(reason)}
+                onPress={() => setSelectedProblemType(item.value)}
               >
                 <View style={[
                   styles.radio,
-                  selectedReason === reason && styles.radioSelected
+                  selectedProblemType === item.value && styles.radioSelected
                 ]}>
-                  {selectedReason === reason && <View style={styles.radioDot} />}
+                  {selectedProblemType === item.value && <View style={styles.radioDot} />}
                 </View>
                 <Text style={[
                   styles.reasonText,
-                  selectedReason === reason && styles.selectedReasonText
+                  selectedProblemType === item.value && styles.selectedReasonText
                 ]}>
-                  {reason}
+                  {item.label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -166,26 +168,79 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           </Text>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.disclaimer}>
-            Les signalements abusifs ou répétés peuvent entraîner des sanctions sur votre compte.
-          </Text>
-          <View style={styles.actions}>
-            <Button
-              title="Annuler"
-              onPress={onClose}
-              variant="outline"
-              style={styles.actionButton}
-            />
-            <Button
-              title={isSubmitting ? 'Envoi...' : 'Signaler'}
-              onPress={handleSubmit}
-              disabled={!selectedReason || !description.trim() || isSubmitting}
-              style={styles.actionButton}
-            />
-          </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Preuves (Optionnel)</Text>
+          <TextInput
+            style={styles.input}
+            value={evidence}
+            onChangeText={setEvidence}
+            placeholder="Lien vers une capture d'écran ou détails supplémentaires..."
+          />
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Text style={styles.disclaimer}>
+          Les signalements abusifs ou répétés peuvent entraîner des sanctions sur votre compte.
+        </Text>
+        <View style={styles.actions}>
+          <Button
+            title="Annuler"
+            onPress={onCancel}
+            variant="outline"
+            style={styles.actionButton}
+          />
+          <Button
+            title={isSubmitting ? 'Envoi...' : 'Signaler'}
+            onPress={handleSubmit}
+            disabled={!selectedProblemType || !description.trim() || isSubmitting}
+            style={styles.actionButton}
+          />
         </View>
       </View>
+    </View>
+  );
+};
+
+interface ReportModalProps {
+  visible: boolean;
+  onClose: () => void;
+  reportType: 'user' | 'ticket' | 'transaction' | 'event' | 'other';
+  reportedId: string;
+  reportedName: string;
+  onSubmitReport: (report: Omit<Report, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  currentUserId: string;
+}
+
+export const ReportModal: React.FC<ReportModalProps> = ({
+  visible,
+  onClose,
+  reportType,
+  reportedId,
+  reportedName,
+  onSubmitReport,
+  currentUserId
+}) => {
+  const getReportTitle = () => {
+    switch (reportType) {
+      case 'user': return `Signaler l'utilisateur: ${reportedName}`;
+      case 'ticket': return `Signaler le billet: ${reportedName}`;
+      case 'transaction': return `Signaler la transaction: ${reportedName}`;
+      case 'event': return `Signaler l'événement: ${reportedName}`;
+      default: return 'Signaler un problème';
+    }
+  };
+
+  return (
+    <CustomModal visible={visible} onClose={onClose} title={getReportTitle()}>
+      <ReportForm
+        reportType={reportType}
+        reportedId={reportedId}
+        reportedName={reportedName}
+        onSubmitReport={onSubmitReport}
+        currentUserId={currentUserId}
+        onCancel={onClose}
+      />
     </CustomModal>
   );
 };
@@ -397,8 +452,22 @@ export const ReportManagement: React.FC<ReportManagementProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
+  },
+  fullHeightContainer: {
     flex: 1,
+  },
+  autoHeightContainer: {
     maxHeight: 600,
+  },
+  fullHeightScroll: {
+    flex: 1,
+  },
+  autoHeightScroll: {
+    flexGrow: 0,
+  },
+  scrollContentContainer: {
+    paddingBottom: 16,
   },
   subtitle: {
     fontSize: 14,
@@ -456,6 +525,13 @@ const styles = StyleSheet.create({
   selectedReasonText: {
     color: '#1e40af',
     fontWeight: '500',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
   },
   textArea: {
     borderWidth: 1,

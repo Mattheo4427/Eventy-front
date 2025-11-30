@@ -5,6 +5,7 @@ import { useAuthRequest, makeRedirectUri, ResponseType } from 'expo-auth-session
 import { jwtDecode } from 'jwt-decode'; // Importation nommée pour jwt-decode v3+
 import { User } from '../types';
 import { keycloakConfig, appSchema } from '../config'; // Importe depuis le nouveau fichier de config
+import { authEvents } from '../services/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -12,17 +13,20 @@ WebBrowser.maybeCompleteAuthSession();
 const discovery = {
   authorizationEndpoint: `${keycloakConfig.baseUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/auth`,
   tokenEndpoint: `${keycloakConfig.baseUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/token`,
+  endSessionEndpoint: `${keycloakConfig.baseUrl}/realms/${keycloakConfig.realm}/protocol/openid-connect/logout`,
 };
 
 // Interface pour le token décodé
 interface DecodedToken {
   sub: string; // C'est l'ID de l'utilisateur
-  name: string;
+  given_name: string;
+  family_name: string;
   email: string;
   preferred_username: string;
   realm_access: {
     roles: string[];
   };
+  app_role?: string; // Attribut personnalisé si utilisé
 }
 
 interface AuthContextType {
@@ -66,13 +70,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Décoder le token pour obtenir les infos de l'utilisateur
         const decoded = jwtDecode<DecodedToken>(accessToken);
         
-        // Mapper les rôles de Keycloak à votre type 'role'
-        const role = decoded.realm_access.roles.includes('admin') ? 'ADMIN' : 'USER';
+              // --- MODIFICATION : AJOUT DE LOGS POUR DÉBUGGER ---
+        console.log("Token décodé complet:", JSON.stringify(decoded, null, 2));
+        console.log("Rôles trouvés:", decoded.realm_access?.roles);
+        console.log("Attributs personnalisés (si présents):", (decoded as any).app_role);
+        console.log("nom et prénom:", decoded.given_name, decoded.family_name);
+        // --- CORRECTION : Vérification insensible à la casse et sécurisée ---
+        // 1. Récupérer la liste des rôles (tableau vide par défaut si inexistant)
+        const roles = decoded.realm_access?.roles || [];
+        
+        // 2. Vérifier si 'admin' ou 'ADMIN' est présent
+        const isAdmin = roles.some(r => r.toUpperCase() === 'ADMIN');
+
+        // 3. (Optionnel) Si vous utilisez l'attribut 'app_role' au lieu des rôles de royaume
+        const isAdminAttr = (decoded as any).app_role === 'ADMIN';
+        
+        const role = isAdminAttr ? 'ADMIN' : 'USER';
+        
+        console.log("Rôle final attribué dans l'app:", role);
         
         // Créer l'objet User tel que défini dans vos types
         const appUser: User = {
           id: decoded.sub,
-          name: decoded.name || decoded.preferred_username,
+          firstName: decoded.given_name || decoded.preferred_username,
+          lastName: decoded.family_name || '',
+          username: decoded.preferred_username || '',
           email: decoded.email,
           role: role,
         };
@@ -158,6 +180,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     bootstrapAsync();
   }, []);
 
+  // 6. Écouter les événements de déconnexion automatique (401)
+  useEffect(() => {
+    const handleAutoLogout = async () => {
+      console.log("Auto-logout triggered via 401 interceptor");
+      await setAuthState(null);
+      // On ne redirige pas forcément vers Keycloak logout endpoint ici pour éviter une boucle infinie ou une UX étrange
+      // Mais on nettoie l'état local.
+    };
+
+    authEvents.on('logout', handleAutoLogout);
+
+    return () => {
+      authEvents.off('logout', handleAutoLogout);
+    };
+  }, []);
+
   // 5. Définir les fonctions de login/logout
   const value: AuthContextType = {
     user,
@@ -173,8 +211,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout: async () => {
       // Efface l'état et le token en mémoire
       await setAuthState(null);
-      // Optionnel : Déconnecter aussi de Keycloak (nécessite le token d'ID et une config)
-      // WebBrowser.openBrowserAsync(`${discovery.authorizationEndpoint}/logout?...`);
+      try {
+        const redirectUrl = makeRedirectUri({ native: appSchema });
+        await WebBrowser.openAuthSessionAsync(
+          `${discovery.endSessionEndpoint}?client_id=${keycloakConfig.clientId}&redirect_uri=${redirectUrl}`,
+          redirectUrl
+        );
+      } catch (e) {
+        console.error("Erreur lors de la déconnexion Keycloak:", e);
+      }
     },
   };
 

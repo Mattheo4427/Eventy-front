@@ -1,15 +1,15 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { CustomModal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Event, FavoriteEvent } from '../types';
+import { EventService } from '../services/EventService';
 
 interface FavoritesManagerProps {
   visible: boolean;
   onClose: () => void;
   favoriteEvents: FavoriteEvent[];
-  events: Event[];
   onRemoveFavorite: (eventId: string) => void;
   onViewEvent: (eventId: string) => void;
 }
@@ -18,18 +18,40 @@ export function FavoritesManager({
   visible, 
   onClose, 
   favoriteEvents, 
-  events, 
   onRemoveFavorite, 
   onViewEvent 
 }: FavoritesManagerProps) {
   const { t } = useTranslation();
-  const getFavoriteEvents = () => {
-    return favoriteEvents
-      .map(fav => events.find(event => event.id === fav.eventId))
-      .filter(Boolean) as Event[];
-  };
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const favoriteEventsList = getFavoriteEvents();
+  useEffect(() => {
+    const loadFavoriteEvents = async () => {
+      if (favoriteEvents.length === 0) {
+        setEvents([]);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        // Fetch all events for the favorites
+        // Optimisation: In a real app, we should have an endpoint getEventsByIds
+        // For now, we'll fetch each event individually
+        const eventPromises = favoriteEvents.map(fav => EventService.getEventById(fav.eventId));
+        const loadedEvents = await Promise.all(eventPromises);
+        // Filter out nulls if any fetch failed
+        setEvents(loadedEvents.filter(e => e !== null) as Event[]);
+      } catch (error) {
+        console.error("Error loading favorite events:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (visible) {
+      loadFavoriteEvents();
+    }
+  }, [visible, favoriteEvents]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -60,73 +82,79 @@ export function FavoritesManager({
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>
-            {t('favoriteEvents', { count: favoriteEventsList.length, ns: 'favorites' })}
+            {t('favoriteEvents', { count: events.length, ns: 'favorites' })}
           </Text>
           <Text style={styles.subtitle}>
             {t('findAllFavorites', { ns: 'favorites' })}
           </Text>
         </View>
 
-        <ScrollView style={styles.eventsList}>
-          {favoriteEventsList.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>⭐</Text>
-              <Text style={styles.emptyText}>{t('noFavoritesTitle', { ns: 'favorites' })}</Text>
-              <Text style={styles.emptySubtext}>
-                {t('noFavoritesDescription', { ns: 'favorites' })}
-              </Text>
-            </View>
-          ) : (
-            favoriteEventsList.map((event) => {
-              const isPassed = isEventPassed(event.date);
-              return (
-                <View key={event.id} style={styles.eventItem}>
-                  <Image
-                    source={{ uri: event.image }}
-                    style={styles.eventImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.eventContent}>
-                    <View style={styles.eventInfo}>
-                      <Text style={styles.eventTitle} numberOfLines={2}>
-                        {event.title}
-                      </Text>
-                      <Text style={styles.eventDate}>
-                        {formatDate(event.date)}
-                      </Text>
-                      <Text style={styles.eventLocation}>
-                        📍 {event.location} - {event.venue}
-                      </Text>
-                      <Text style={styles.eventCategory}>
-                        {event.category}
-                      </Text>
-                      {isPassed && (
-                        <View style={styles.passedBadge}>
-                          <Text style={styles.passedText}>Événement passé</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.eventActions}>
-                      <Button
-                        title="Voir"
-                        onPress={() => onViewEvent(event.id)}
-                        variant="outline"
-                        size="sm"
-                        style={styles.actionButton}
-                      />
-                      <TouchableOpacity
-                        onPress={() => onRemoveFavorite(event.id)}
-                        style={styles.removeButton}
-                      >
-                        <Text style={styles.removeButtonText}>❤️</Text>
-                      </TouchableOpacity>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#2563eb" />
+          </View>
+        ) : (
+          <ScrollView style={styles.eventsList}>
+            {events.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>⭐</Text>
+                <Text style={styles.emptyText}>{t('noFavoritesTitle', { ns: 'favorites' })}</Text>
+                <Text style={styles.emptySubtext}>
+                  {t('noFavoritesDescription', { ns: 'favorites' })}
+                </Text>
+              </View>
+            ) : (
+              events.map((event) => {
+                const isPassed = isEventPassed(event.startDate);
+                return (
+                  <View key={event.id} style={styles.eventItem}>
+                    <Image
+                      source={{ uri: event.imageUrl }}
+                      style={styles.eventImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.eventContent}>
+                      <View style={styles.eventInfo}>
+                        <Text style={styles.eventTitle} numberOfLines={2}>
+                          {event.name}
+                        </Text>
+                        <Text style={styles.eventDate}>
+                          {formatDate(event.startDate)}
+                        </Text>
+                        <Text style={styles.eventLocation}>
+                          📍 {event.location} - {event.location}
+                        </Text>
+                        <Text style={styles.eventCategory}>
+                          {event.categoryLabel}
+                        </Text>
+                        {isPassed && (
+                          <View style={styles.passedBadge}>
+                            <Text style={styles.passedText}>Événement passé</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.eventActions}>
+                        <Button
+                          title="Voir"
+                          onPress={() => onViewEvent(event.id)}
+                          variant="outline"
+                          size="sm"
+                          style={styles.actionButton}
+                        />
+                        <TouchableOpacity
+                          onPress={() => onRemoveFavorite(event.id)}
+                          style={styles.removeButton}
+                        >
+                          <Text style={styles.removeButtonText}>❤️</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
-                </View>
-              );
-            })
-          )}
-        </ScrollView>
+                );
+              })
+            )}
+          </ScrollView>
+        )}
       </View>
     </CustomModal>
   );
@@ -174,6 +202,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     maxHeight: 600,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   header: {
     paddingBottom: 16,

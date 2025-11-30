@@ -1,13 +1,16 @@
 import React from 'react';
-import { TouchableOpacity, Text, TouchableOpacityProps, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, View, Text, TouchableOpacityProps, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'sm' | 'md' | 'lg';
+  icon?: React.ReactNode;
+  iconStyle?: ViewStyle | ViewStyle[];
+  textStyle?: TextStyle | TextStyle[];
 }
 
-export function Button({ title, variant = 'primary', size = 'md', style, ...props }: ButtonProps) {
+export function Button({ title, variant = 'primary', size = 'md', style, icon, iconStyle, textStyle, ...props }: ButtonProps) {
   const getButtonStyle = (): ViewStyle[] => {
     const baseStyle: ViewStyle[] = [styles.button];
     
@@ -58,7 +61,10 @@ export function Button({ title, variant = 'primary', size = 'md', style, ...prop
 
   return (
     <TouchableOpacity style={[getButtonStyle(), style]} {...props}>
-      <Text style={getTextStyle()}>{title}</Text>
+      <View style={styles.content}>
+        {icon ? <View style={[styles.iconContainer, iconStyle]}>{icon}</View> : null}
+        <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -105,5 +111,15 @@ const styles = StyleSheet.create({
   },
   outlineText: {
     color: '#2563eb',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

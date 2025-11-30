@@ -8,5 +8,14 @@
   "location": "Location",
   "all": "All",
   "noEventsFound": "No events found",
-  "modifySearchCriteria": "Try modifying your search criteria"
+  "modifySearchCriteria": "Try modifying your search criteria",
+  "categories": {
+    "Musique": "Music",
+    "Sport": "Sport",
+    "Arts": "Arts",
+    "Technologie": "Technology",
+    "Théâtre": "Theater",
+    "Concert": "Concert",
+    "Festival": "Festival"
+  }
 }

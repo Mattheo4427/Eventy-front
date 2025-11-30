@@ -8,15 +8,17 @@ interface CustomModalProps extends Partial<ModalProps> {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  contentStyle?: any;
 }
 
-export function CustomModal({ visible, onClose, title, children, ...props }: CustomModalProps) {
+export function CustomModal({ visible, onClose, title, children, contentStyle, ...props }: CustomModalProps) {
   return (
     <Modal
       visible={visible}
       animationType="fade"
       transparent={true}
       onRequestClose={onClose}
+      presentationStyle="overFullScreen" // Helps with iOS modal stacking
       {...props}
     >
       <SafeAreaView style={styles.overlay}>
@@ -27,7 +29,7 @@ export function CustomModal({ visible, onClose, title, children, ...props }: Cus
               <Ionicons name="close" size={24} color="#374151" />
             </TouchableOpacity>
           </View>
-          <View style={styles.content}>
+          <View style={[styles.content, contentStyle]}>
             {children}
           </View>
         </View>
@@ -50,6 +52,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: '80%',
+    overflow: 'hidden', // Prevent content from spilling out
+    display: 'flex',
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
@@ -58,6 +63,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
+    flexShrink: 0,
   },
   title: {
     fontSize: 18,
@@ -70,6 +76,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    maxHeight: 400,
+    // flex: 1 removed to prevent collapse when parent has no fixed height
   },
 });

@@ -1,319 +1,230 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Event, Ticket } from '../types';
-import { Button } from './ui/Button';
-import { Card, CardContent, CardHeader } from './ui/Card';
+import { Event } from '../types';
+import { useTranslation } from 'react-i18next';
+import { EventService } from '../services/EventService';
+import { SellTicketModal } from './SellTicketModal'; // Import du Modal
+import { useAuth } from '../contexts/AuthContext'; // Pour vérifier la connexion
 
 interface EventDetailProps {
-  event: Event;
-  tickets: Ticket[];
-  onBuyTicket: (ticket: Ticket) => void;
+  eventId: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
+  onViewTickets: (eventId: string) => void; // Navigation vers la liste des billets
   onBack: () => void;
 }
 
-export function EventDetail({ event, tickets, onBuyTicket, onBack }: EventDetailProps) {
-  const formatPrice = (price: number) => {
-    return `${price}€`;
+export function EventDetail({ eventId, isFavorite = false, onToggleFavorite, onViewTickets, onBack }: EventDetailProps) {
+  const { t } = useTranslation();
+  const { isAuthenticated } = useAuth(); // Récupération du statut de connexion
+  
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // État local pour gérer la visibilité du modal
+  const [showSellModal, setShowSellModal] = useState(false);
+
+  // Chargement des données de l'événement
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const eventData = await EventService.getEventById(eventId);
+      setEvent(eventData);
+    } catch (error) {
+      console.error("Erreur chargement détail:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getSavingsText = (price: number, originalPrice: number) => {
-    const savings = originalPrice - price;
-    if (savings > 0) {
-      return `Save ${savings}€`;
+  useEffect(() => {
+    if (eventId) loadData();
+  }, [eventId]);
+
+  // Gestion du clic sur "Vendre"
+  const handleSellClick = () => {
+    if (!isAuthenticated) {
+      Alert.alert("Connexion requise", "Vous devez être connecté pour vendre un billet.");
+      return;
     }
-    return null;
+    setShowSellModal(true);
+  };
+
+  if (loading) {
+    return <View style={[styles.container, styles.center]}><ActivityIndicator size="large" color="#2563eb" /></View>;
+  }
+
+  if (!event) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <Text>Événement introuvable</Text>
+      </View>
+    );
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#374151" />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{flex: 1}}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Image et Header */}
+        <View style={styles.imageContainer}>
+            <Image 
+              source={{ uri: event.imageUrl || 'https://via.placeholder.com/800x400' }} 
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
+            <TouchableOpacity onPress={onBack} style={styles.backButtonOverlay}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
 
-      {/* Event Details */}
-      <View style={styles.eventSection}>
-        <Image 
-          source={{ uri: event.image }}
-          style={styles.eventImage}
-          resizeMode="cover"
-        />
-        
-        <View style={styles.eventInfo}>
-          <Text style={styles.eventTitle}>{event.title}</Text>
-          
-          <View style={styles.eventMeta}>
-            <View style={styles.metaItem}>
-              <Ionicons name="calendar" size={20} color="#2563eb" />
-              <Text style={styles.metaText}>
-                {new Date(event.date).toLocaleDateString('fr-FR', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </Text>
-            </View>
+            {onToggleFavorite && (
+              <TouchableOpacity onPress={onToggleFavorite} style={styles.favoriteButtonOverlay}>
+                <Ionicons 
+                  name={isFavorite ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={isFavorite ? "#ef4444" : "#fff"} 
+                />
+              </TouchableOpacity>
+            )}
             
-            <View style={styles.metaItem}>
-              <Ionicons name="location" size={20} color="#2563eb" />
-              <Text style={styles.metaText}>{event.venue}</Text>
+            <View style={styles.titleOverlay}>
+                <Text style={styles.title}>{event.name}</Text>
+                {event.categoryLabel && (
+                    <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryText}>{event.categoryLabel}</Text>
+                    </View>
+                )}
             </View>
-            
-            <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={20} color="#2563eb" />
-              <Text style={styles.metaText}>{event.location}</Text>
-            </View>
-            
-            <View style={styles.metaItem}>
-              <Ionicons name="pricetag" size={20} color="#2563eb" />
-              <Text style={styles.metaText}>{event.category}</Text>
-            </View>
-          </View>
-
-          <Text style={styles.eventDescription}>{event.description}</Text>
-        </View>
-      </View>
-
-      {/* Tickets Section */}
-      <View style={styles.ticketsSection}>
-        <View style={styles.ticketsHeader}>
-          <Text style={styles.ticketsTitle}>
-            Billets disponibles ({tickets.length})
-          </Text>
-          <Text style={styles.ticketsSubtitle}>
-            Sélectionnez le billet qui vous convient
-          </Text>
         </View>
 
-        {tickets.length > 0 ? (
-          <View style={styles.ticketsList}>
-            {tickets.map(ticket => (
-              <Card key={ticket.id} style={styles.ticketCard}>
-                <CardContent style={styles.ticketContent}>
-                  <View style={styles.ticketInfo}>
-                    <View style={styles.ticketHeader}>
-                      <Text style={styles.ticketSection}>
-                        {ticket.section} - Rang {ticket.row}, Siège {ticket.seat}
-                      </Text>
-                      <View style={styles.priceContainer}>
-                        <Text style={styles.price}>{formatPrice(ticket.price)}</Text>
-                        {ticket.originalPrice > ticket.price && (
-                          <Text style={styles.originalPrice}>
-                            {formatPrice(ticket.originalPrice)}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                    
-                    <View style={styles.ticketMeta}>
-                      <View style={styles.sellerInfo}>
-                        <Ionicons name="person-outline" size={16} color="#6b7280" />
-                        <Text style={styles.sellerText}>
-                          Vendu par {ticket.sellerName}
-                        </Text>
-                      </View>
-                      
-                      {getSavingsText(ticket.price, ticket.originalPrice) && (
-                        <Text style={styles.savings}>
-                          {getSavingsText(ticket.price, ticket.originalPrice)}
-                        </Text>
-                      )}
-                    </View>
-
-                    {ticket.description && (
-                      <Text style={styles.ticketDescription}>
-                        {ticket.description}
-                      </Text>
-                    )}
-                  </View>
-
-                  <Button
-                    title={`Buy - ${formatPrice(ticket.price)}`}
-                    onPress={() => onBuyTicket(ticket)}
-                    size="lg"
-                    style={styles.buyButton}
-                  />
-                </CardContent>
-              </Card>
-            ))}
+        <View style={styles.content}>
+          {/* Info Date/Lieu */}
+          <View style={styles.infoSection}>
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar" size={20} color="#4b5563" />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Date</Text>
+                <Text style={styles.infoValue}>{formatDate(event.startDate)}</Text>
+              </View>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="location" size={20} color="#4b5563" />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Lieu</Text>
+                <Text style={styles.infoValue}>{event.location}</Text>
+                {event.fullAddress && <Text style={styles.infoSubValue}>{event.fullAddress}</Text>}
+              </View>
+            </View>
           </View>
-        ) : (
-          <View style={styles.noTickets}>
-            <Ionicons name="ticket-outline" size={64} color="#9ca3af" />
-            <Text style={styles.noTicketsTitle}>No tickets available</Text>
-            <Text style={styles.noTicketsText}>
-              There are currently no tickets for sale for this event.
-              Come back later or create an alert.
-            </Text>
+
+          {/* Description */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>À propos</Text>
+            <Text style={styles.description}>{event.description}</Text>
           </View>
-        )}
-      </View>
-    </ScrollView>
+
+          {/* Section Billetterie (Boutons d'action) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Billetterie</Text>
+            <View style={styles.actionButtonsContainer}>
+                
+                {/* Action 1 : Voir les billets (Acheteur) */}
+                <TouchableOpacity 
+                    style={[styles.actionCard, styles.buyCard]} 
+                    onPress={() => onViewTickets(event.id)}
+                >
+                    <View style={styles.iconCircleBuy}>
+                        <Ionicons name="ticket" size={24} color="#2563eb" />
+                    </View>
+                    <View style={{flex: 1}}>
+                        <Text style={styles.actionTitle}>Acheter un billet</Text>
+                        <Text style={styles.actionSubtitle}>Voir les offres disponibles</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+
+                {/* Action 2 : Vendre un billet (Vendeur) */}
+                <TouchableOpacity 
+                    style={[styles.actionCard, styles.sellCard]} 
+                    onPress={handleSellClick}
+                >
+                    <View style={styles.iconCircleSell}>
+                        <Ionicons name="cash-outline" size={24} color="#059669" />
+                    </View>
+                    <View style={{flex: 1}}>
+                        <Text style={styles.actionTitle}>Revendre un billet</Text>
+                        <Text style={styles.actionSubtitle}>Mettre en vente sur la place de marché</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Modal de Vente intégré localement */}
+      <SellTicketModal 
+        visible={showSellModal}
+        event={event}
+        onClose={() => setShowSellModal(false)}
+        onSuccess={() => {
+             // Feedback utilisateur
+             // On pourrait recharger les données si on affichait un compteur de billets ici
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  center: { justifyContent: 'center', alignItems: 'center' },
+  
+  imageContainer: { position: 'relative', height: 240, width: '100%' },
+  coverImage: { width: '100%', height: '100%', backgroundColor: '#f3f4f6' },
+  backButtonOverlay: { position: 'absolute', top: 50, left: 16, padding: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20 },
+  favoriteButtonOverlay: { position: 'absolute', top: 50, right: 16, padding: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20 },
+  titleOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, paddingTop: 40, backgroundColor: 'rgba(0,0,0,0.4)' },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#fff', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
+  
+  badgesContainer: { flexDirection: 'row', gap: 8 },
+  categoryBadge: { backgroundColor: '#2563eb', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  categoryText: { color: '#fff', fontWeight: '600', fontSize: 12 },
+
+  content: { padding: 20 },
+  
+  infoSection: { flexDirection: 'row', backgroundColor: '#f9fafb', padding: 16, borderRadius: 16, marginBottom: 24, justifyContent: 'space-between' },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', flex: 1 },
+  infoTextContainer: { marginLeft: 10, flex: 1 },
+  infoLabel: { fontSize: 12, color: '#6b7280', marginBottom: 2, textTransform: 'uppercase' },
+  infoValue: { fontSize: 15, color: '#111827', fontWeight: '600' },
+  infoSubValue: { fontSize: 13, color: '#4b5563', marginTop: 2 },
+
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginBottom: 16 },
+  description: { fontSize: 16, color: '#4b5563', lineHeight: 24 },
+
+  actionButtonsContainer: { gap: 12 },
+  actionCard: { 
+      flexDirection: 'row', alignItems: 'center', 
+      padding: 16, borderRadius: 16, 
+      backgroundColor: '#fff', 
+      borderWidth: 1, borderColor: '#e5e7eb',
+      shadowColor: '#000', shadowOffset: {width:0, height:2}, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    fontSize: 16,
-    color: '#374151',
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  eventSection: {
-    backgroundColor: '#ffffff',
-    marginBottom: 24,
-  },
-  eventImage: {
-    width: '100%',
-    height: 250,
-  },
-  eventInfo: {
-    padding: 20,
-  },
-  eventTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 16,
-    lineHeight: 32,
-  },
-  eventMeta: {
-    marginBottom: 20,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metaText: {
-    fontSize: 16,
-    color: '#374151',
-    marginLeft: 12,
-    flex: 1,
-  },
-  eventDescription: {
-    fontSize: 16,
-    color: '#6b7280',
-    lineHeight: 24,
-  },
-  ticketsSection: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-  },
-  ticketsHeader: {
-    marginBottom: 20,
-  },
-  ticketsTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  ticketsSubtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-  },
-  ticketsList: {
-    gap: 16,
-  },
-  ticketCard: {
-    backgroundColor: '#ffffff',
-  },
-  ticketContent: {
-    padding: 20,
-  },
-  ticketInfo: {
-    marginBottom: 16,
-  },
-  ticketHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  ticketSection: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-  },
-  priceContainer: {
-    alignItems: 'flex-end',
-  },
-  price: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#059669',
-  },
-  originalPrice: {
-    fontSize: 14,
-    color: '#6b7280',
-    textDecorationLine: 'line-through',
-    marginTop: 2,
-  },
-  ticketMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sellerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sellerText: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginLeft: 6,
-  },
-  savings: {
-    fontSize: 14,
-    color: '#059669',
-    fontWeight: '600',
-  },
-  ticketDescription: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-    marginTop: 8,
-  },
-  buyButton: {
-    marginTop: 8,
-  },
-  noTickets: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 64,
-    paddingHorizontal: 32,
-  },
-  noTicketsTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  noTicketsText: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
+  buyCard: { borderLeftWidth: 4, borderLeftColor: '#2563eb' },
+  sellCard: { borderLeftWidth: 4, borderLeftColor: '#059669' },
+  
+  iconCircleBuy: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  iconCircleSell: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  
+  actionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  actionSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 2 },
 });
