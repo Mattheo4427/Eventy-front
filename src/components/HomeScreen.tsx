@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Event } from '../types';
 import { Button } from './ui/Button';
 import { EventService } from '../services/EventService';
+import { FeaturedEventCard } from './FeaturedEventCard';
 import { Ionicons } from '@expo/vector-icons';
 
 interface HomeScreenProps {
@@ -80,42 +81,11 @@ export function HomeScreen({ onViewEvent, onNavigateToEvents }: HomeScreenProps)
           >
             {featuredEvents.length > 0 ? (
               featuredEvents.map(event => (
-                <TouchableOpacity 
+                <FeaturedEventCard 
                   key={event.id} 
-                  style={styles.eventCard}
-                  onPress={() => onViewEvent(event.id)}
-                  activeOpacity={0.8}
-                >
-                  <Image 
-                    // CORRECTION : Utilisation de imageUrl et image par défaut
-                    source={{ uri: event.imageUrl || 'https://via.placeholder.com/400x200?text=Event' }} 
-                    style={styles.eventImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.eventContent}>
-                    {/* CORRECTION : Utilisation de name */}
-                    <Text style={styles.eventTitle} numberOfLines={2}>
-                      {event.name}
-                    </Text>
-                    
-                    <View style={styles.metaContainer}>
-                      <Ionicons name="calendar-outline" size={14} color="#6b7280" />
-                      <Text style={styles.eventDetails}>
-                        {/* CORRECTION : Utilisation de startDate */}
-                        {' '}{new Date(event.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      </Text>
-                      <Text style={styles.bullet}>•</Text>
-                      <Ionicons name="location-outline" size={14} color="#6b7280" />
-                      <Text style={styles.eventDetails} numberOfLines={1}>
-                         {' '}{event.location}
-                      </Text>
-                    </View>
-
-                    <Text style={styles.eventLink}>
-                      {t('viewTickets', { ns: 'home', defaultValue: 'Voir les billets' })} 
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                  event={event} 
+                  onViewEvent={onViewEvent} 
+                />
               ))
             ) : (
               <Text style={styles.emptyText}>Aucun événement à la une pour le moment.</Text>
@@ -198,57 +168,6 @@ const styles = StyleSheet.create({
   eventsContainer: {
     paddingRight: 16,
     paddingBottom: 10, // Pour l'ombre
-  },
-  eventCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginRight: 16,
-    width: 260,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  eventImage: {
-    width: '100%',
-    height: 150,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    backgroundColor: '#e5e7eb',
-  },
-  eventContent: {
-    padding: 16,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-    lineHeight: 22,
-    height: 44, // Fixe la hauteur pour alignement
-  },
-  metaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  eventDetails: {
-    fontSize: 13,
-    color: '#6b7280',
-    fontWeight: '500',
-    maxWidth: 90,
-  },
-  bullet: {
-    marginHorizontal: 6,
-    color: '#9ca3af',
-  },
-  eventLink: {
-    fontSize: 14,
-    color: '#2563eb',
-    fontWeight: '700',
   },
   emptyText: {
     color: '#6b7280',

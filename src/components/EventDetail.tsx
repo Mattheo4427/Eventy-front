@@ -21,6 +21,7 @@ export function EventDetail({ eventId, isFavorite = false, onToggleFavorite, onV
   
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
   
   // État local pour gérer la visibilité du modal
   const [showSellModal, setShowSellModal] = useState(false);
@@ -41,6 +42,10 @@ export function EventDetail({ eventId, isFavorite = false, onToggleFavorite, onV
   useEffect(() => {
     if (eventId) loadData();
   }, [eventId]);
+
+  useEffect(() => {
+    if (event) setImageError(false);
+  }, [event]);
 
   // Gestion du clic sur "Vendre"
   const handleSellClick = () => {
@@ -70,32 +75,49 @@ export function EventDetail({ eventId, isFavorite = false, onToggleFavorite, onV
     });
   };
 
+  const hasImage = !imageError && event.imageUrl;
+
   return (
     <View style={{flex: 1}}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Image et Header */}
         <View style={styles.imageContainer}>
-            <Image 
-              source={{ uri: event.imageUrl || 'https://via.placeholder.com/800x400' }} 
-              style={styles.coverImage}
-              resizeMode="cover"
-            />
-            <TouchableOpacity onPress={onBack} style={styles.backButtonOverlay}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
+            {!hasImage ? (
+              <View style={[styles.coverImage, styles.placeholderContainer]}>
+                <Ionicons name="image-outline" size={64} color="#9ca3af" />
+                <Text style={styles.placeholderText}>Eventy</Text>
+              </View>
+            ) : (
+              <Image 
+                source={{ uri: event.imageUrl }} 
+                style={styles.coverImage}
+                resizeMode="cover"
+                onError={() => setImageError(true)}
+              />
+            )}
+            
+            <TouchableOpacity 
+              onPress={onBack} 
+              style={[styles.backButtonOverlay, !hasImage && styles.lightButtonOverlay]}
+            >
+              <Ionicons name="arrow-back" size={24} color={!hasImage ? "#111827" : "#fff"} />
             </TouchableOpacity>
 
             {onToggleFavorite && (
-              <TouchableOpacity onPress={onToggleFavorite} style={styles.favoriteButtonOverlay}>
+              <TouchableOpacity 
+                onPress={onToggleFavorite} 
+                style={[styles.favoriteButtonOverlay, !hasImage && styles.lightButtonOverlay]}
+              >
                 <Ionicons 
                   name={isFavorite ? "heart" : "heart-outline"} 
                   size={24} 
-                  color={isFavorite ? "#ef4444" : "#fff"} 
+                  color={isFavorite ? "#ef4444" : (!hasImage ? "#111827" : "#fff")} 
                 />
               </TouchableOpacity>
             )}
             
             <View style={styles.titleOverlay}>
-                <Text style={styles.title}>{event.name}</Text>
+                <Text style={[styles.title, !hasImage && styles.darkTitle]}>{event.name}</Text>
                 {event.categoryLabel && (
                     <View style={styles.categoryBadge}>
                         <Text style={styles.categoryText}>{event.categoryLabel}</Text>
@@ -189,10 +211,26 @@ const styles = StyleSheet.create({
   
   imageContainer: { position: 'relative', height: 240, width: '100%' },
   coverImage: { width: '100%', height: '100%', backgroundColor: '#f3f4f6' },
+  placeholderContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#e5e7eb',
+  },
+  placeholderText: {
+    marginTop: 12,
+    color: '#9ca3af',
+    fontSize: 24,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 40,
+  },
   backButtonOverlay: { position: 'absolute', top: 50, left: 16, padding: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20 },
   favoriteButtonOverlay: { position: 'absolute', top: 50, right: 16, padding: 8, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20 },
-  titleOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, paddingTop: 40, backgroundColor: 'rgba(0,0,0,0.4)' },
+  lightButtonOverlay: { backgroundColor: 'rgba(255,255,255,0.8)' },
+  titleOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, paddingTop: 40 },
   title: { fontSize: 26, fontWeight: 'bold', color: '#fff', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 4 },
+  darkTitle: { color: '#111827', textShadowColor: 'transparent' },
   
   badgesContainer: { flexDirection: 'row', gap: 8 },
   categoryBadge: { backgroundColor: '#2563eb', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },

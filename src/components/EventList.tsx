@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TextInput, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { Event, EventCategory } from '../types';
 import { EventService } from '../services/EventService';
 import { EventCard } from './EventCard';
@@ -20,8 +21,21 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
   // Filtres
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { t } = useTranslation(); 
+
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      const dateA = new Date(a.startDate).getTime();
+      const dateB = new Date(b.startDate).getTime();
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }, [events, sortOrder]);
+
+  const toggleSort = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
 
   const loadData = async () => {
     try {
@@ -79,12 +93,18 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
       <Text style={styles.pageTitle}>{t('availableEvents', { ns: 'events', defaultValue: 'Événements disponibles' })}</Text>
       <Text style={styles.subtitle}>{t('findTickets', { ns: 'events', defaultValue: 'Trouvez les billets pour vos événements préférés' })}</Text>
 
-      <TextInput
-        style={styles.searchInput}
-        placeholder={t('searchPlaceholder', { ns: 'events', defaultValue: 'Rechercher un événement...' })}
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-      />
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('searchPlaceholder', { ns: 'events', defaultValue: 'Rechercher un événement...' })}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+        />
+        <TouchableOpacity style={styles.sortButton} onPress={toggleSort}>
+          <Ionicons name={sortOrder === 'asc' ? "calendar-outline" : "calendar"} size={20} color="#4b5563" />
+          <Ionicons name={sortOrder === 'asc' ? "arrow-up-outline" : "arrow-down-outline"} size={14} color="#4b5563" style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.filterLabelContainer}>
          <Text style={styles.filterLabel}>{t('category', { ns: 'events', defaultValue: 'Catégorie' })}:</Text>
@@ -133,7 +153,7 @@ export function EventList({ onViewEvent, onSellTicket }: EventListProps) {
   return (
     <View style={styles.container}>
       <FlatList
-        data={events}
+        data={sortedEvents}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContent}
@@ -165,12 +185,27 @@ const styles = StyleSheet.create({
   headerContainer: { padding: 16, backgroundColor: 'white', marginBottom: 10 },
   pageTitle: { fontSize: 28, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#6b7280', marginBottom: 16 },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
   searchInput: {
+    flex: 1,
     backgroundColor: '#f3f4f6',
     padding: 12,
     borderRadius: 8,
     fontSize: 16,
-    marginBottom: 16,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 50, // Match input height roughly
   },
   filterLabelContainer: { marginBottom: 8 },
   filterLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },

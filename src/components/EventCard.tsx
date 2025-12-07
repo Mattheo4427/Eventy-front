@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Event } from '../types';
@@ -19,6 +19,11 @@ export const EventCard: React.FC<EventCardProps> = ({
   onToggleFavorite, 
   showFavoriteButton = false 
 }) => {
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [event.imageUrl]);
   
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Date inconnue';
@@ -38,12 +43,19 @@ export const EventCard: React.FC<EventCardProps> = ({
     >
       {/* Conteneur Image */}
       <View style={styles.imageContainer}>
-        <Image 
-          // Utilisation d'une image par défaut robuste
-          source={{ uri: event.imageUrl || 'https://via.placeholder.com/400x200?text=Eventy' }} 
-          style={styles.image}
-          resizeMode="cover"
-        />
+        {(imageError || !event.imageUrl) ? (
+          <View style={[styles.image, styles.placeholderContainer]}>
+            <Ionicons name="image-outline" size={48} color="#9ca3af" />
+            <Text style={styles.placeholderText}>Eventy</Text>
+          </View>
+        ) : (
+          <Image 
+            source={{ uri: event.imageUrl }} 
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => setImageError(true)}
+          />
+        )}
         
         {/* Badge Statut (si non actif) */}
         {event.status !== 'active' && (
@@ -115,6 +127,19 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 160,
     backgroundColor: '#e5e7eb',
+  },
+  placeholderContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+  },
+  placeholderText: {
+    marginTop: 8,
+    color: '#9ca3af',
+    fontSize: 16,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
   },
   content: {
     padding: 16,
